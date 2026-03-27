@@ -18,3 +18,5 @@ __pycache__/
 
 # Fisiere cu secrete (parole, chei API)
 .env
+
+db_vectorial/
