@@ -1,0 +1,20 @@
+# Mediul virtual (cel mai important!)
+venv/
+ENV/
+env/
+
+# Fisiere temporare Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Baza de date locala (daca folosesti sqlite pentru teste)
+*.db
+
+# Fisiere de configurare IDE
+.vscode/
+.idea/
+
+# Fisiere cu secrete (parole, chei API)
+.env
