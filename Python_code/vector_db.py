@@ -29,17 +29,3 @@ class VectorDBManager:
         )
         return results
 
-
-if __name__ == "__main__":
-    db = VectorDBManager()
-    
-
-    db.adauga_document(
-        text="Complexitatea algoritmului Merge Sort este O(n log n) în toate cazurile.",
-        metadata={"sursa": "Curs Algoritmi", "capitol": "Divide et Impera"},
-        id_unic="ms_001"
-    )
-    
-
-    raspuns = db.cauta_similare("Care este complexitatea la merge sort?")
-    print("\nRezultat găsit:", raspuns['documents'][0][0])
