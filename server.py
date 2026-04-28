@@ -93,7 +93,6 @@ async def run_code(request: RunRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    # Rulăm serverul pe portul 8000
     print("Porneste serverul Python Backend...")
     print("Poti deschide acum index.html in browser!")
     uvicorn.run(app, host="0.0.0.0", port=8000)

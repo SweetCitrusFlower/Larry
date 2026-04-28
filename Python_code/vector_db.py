@@ -4,10 +4,7 @@ from chromadb.config import Settings
 class VectorDBManager:
     def __init__(self, path="./db_vectorial"):
 
-        self.client = chromadb.PersistentClient(path=path)
-        
-
-        
+        self.client = chromadb.PersistentClient(path=path)        
         self.collection = self.client.get_or_create_collection(
             name="biblioteca_algoritmi",
             metadata={"hnsw:space": "cosine"} 
@@ -29,4 +26,3 @@ class VectorDBManager:
             n_results=n_rezultate
         )
         return results
-
