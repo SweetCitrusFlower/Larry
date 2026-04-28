@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Coach - IDE</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Icons (Lucide) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Monaco Editor AMD loader -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+</head>
+<body>
+
+    <div class="ide-container">
+        <!-- Left Pane: Code Editor -->
+        <section class="editor-pane">
+            <header class="pane-header">
+                <div class="file-tabs">
+                    <div class="tab active">
+                        <i data-lucide="file-code"></i>
+                        <span>main.py</span>
+                    </div>
+                </div>
+                <div class="editor-actions">
+                    <button class="run-btn" onclick="runCode()">
+                        <i data-lucide="play"></i> Run
+                    </button>
+                </div>
+            </header>
+            <div id="monaco-editor-container" class="editor-container"></div>
+        </section>
+
+        <!-- Resizer handler between panes -->
+        <div class="resizer" id="dragMe"></div>
+
+        <!-- Right Pane: AI Chat -->
+        <section class="chat-pane">
+            <header class="pane-header chat-header">
+                <div class="header-info">
+                    <h2><i data-lucide="brain-circuit" class="logo-icon"></i> AI Coach</h2>
+                </div>
+                <div class="header-actions">
+                    <button class="icon-btn" title="Clear Chat" onclick="clearChat()"><i data-lucide="trash-2"></i></button>
+                    <button class="icon-btn" title="Settings"><i data-lucide="settings"></i></button>
+                </div>
+            </header>
+
+            <div class="chat-container" id="chat-container">
+                <div class="messages" id="messages">
+                    <!-- Welcome Message -->
+                    <div class="message ai-message">
+                        <div class="avatar ai-avatar">
+                            <i data-lucide="bot"></i>
+                        </div>
+                        <div class="message-content">
+                            <p>Salut! Sunt asistentul tău de programare. Scrie codul în stânga, iar dacă ai nevoie de ajutor, explicații sau debugging, întreabă-mă aici.</p>
+                            <span class="timestamp">Acum</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <textarea id="user-input" placeholder="Întreabă AI-ul..." rows="1"></textarea>
+                    <button id="send-btn" class="send-btn" onclick="sendMessage()">
+                        <i data-lucide="send-horizonal"></i>
+                    </button>
+                </div>
+                <div class="input-footer">
+                    <p>AI Coach poate face greșeli de codare. Verifică sugestiile.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="script.js"></script>
+</body>
+</html>
