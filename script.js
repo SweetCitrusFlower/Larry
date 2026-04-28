@@ -90,8 +90,15 @@ resizer.addEventListener('mousedown', mouseDownHandler);
 
 
 // ==========================================================================
-// Chat Logic
+// Chat & Ollama Logic
 // ==========================================================================
+let OLLAMA_MODEL = 'qwen2.5-coder:3b'; // Schimbă această variabilă cu modelul dorit
+const OLLAMA_URL = 'http://localhost:11434/api/chat';
+
+let conversationHistory = [
+    { role: "system", content: "Ești un asistent de programare (AI Coach). Răspunzi concis și la obiect. Când ești întrebat de cod, te uiți pe contextul furnizat." }
+];
+
 const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
 const messagesContainer = document.getElementById('messages');
@@ -129,10 +136,47 @@ function sendMessage() {
 
     showTypingIndicator();
 
-    setTimeout(() => {
+    let editorCode = editor ? editor.getValue() : "";
+    fetchOllamaResponse(text, editorCode);
+}
+
+async function fetchOllamaResponse(userMessage, currentCode) {
+    // Adaugă contextul de cod la mesaj (invizibil pentru istoric dacă preferi, dar aici îl adăugăm la mesaj)
+    let promptMessage = userMessage;
+    if (currentCode.trim().length > 0) {
+        promptMessage = `[Codul curent din editor este:\n${currentCode}]\n\n${userMessage}`;
+    }
+
+    conversationHistory.push({ role: "user", content: promptMessage });
+
+    try {
+        const response = await fetch(OLLAMA_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: OLLAMA_MODEL,
+                messages: conversationHistory,
+                stream: false
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Eroare HTTP: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const aiReply = data.message.content;
+        
+        conversationHistory.push({ role: "assistant", content: aiReply });
+        
         removeTypingIndicator();
-        addAiMessage(getMockAiResponse(text));
-    }, 1500 + Math.random() * 1000);
+        addAiMessage(aiReply);
+        
+    } catch (error) {
+        console.error("Ollama Error:", error);
+        removeTypingIndicator();
+        addAiMessage(`❌ Eroare la conectarea cu Ollama. Asigură-te că rulează local (\`ollama serve\`) și că modelul \`${OLLAMA_MODEL}\` este instalat. Mesaj tehnic: ${error.message}`);
+    }
 }
 
 function addUserMessage(text) {
@@ -209,21 +253,11 @@ function clearChat() {
     const welcomeMessage = messagesContainer.firstElementChild;
     messagesContainer.innerHTML = '';
     messagesContainer.appendChild(welcomeMessage);
-}
-
-// Simple mock responses
-function getMockAiResponse(input) {
-    const lowerInput = input.toLowerCase();
     
-    if (lowerInput.includes('eroare') || lowerInput.includes('error') || lowerInput.includes('bug')) {
-        return 'Văd că te confrunți cu o eroare. Funcția `calculate_fibonacci` pare corectă. Ești sigur că apelezi funcția cu un număr întreg? Oferă-mi mesajul de eroare pentru a te putea ajuta mai precis.';
-    }
-    
-    if (lowerInput.includes('optimizare') || lowerInput.includes('mai rapid') || lowerInput.includes('optimize')) {
-        return 'Varianta actuală este `O(n)` ca timp, ceea ce este destul de bine! Dacă vrei, putem folosi memoization (cache) pentru a face apelurile repetate și mai rapide:\n\n```python\nfrom functools import lru_cache\n\n@lru_cache(maxsize=None)\ndef fib(n):\n    if n < 2:\n        return n\n    return fib(n-1) + fib(n-2)\n```';
-    }
-    
-    return 'Am înțeles. Analizez codul din editor... Pare în regulă! Ai nevoie să explic cum funcționează secvența Fibonacci sau vrei să scriem o altă funcție?';
+    // Reset history
+    conversationHistory = [
+        { role: "system", content: "Ești un asistent de programare (AI Coach). Răspunzi concis și la obiect. Când ești întrebat de cod, te uiți pe contextul furnizat." }
+    ];
 }
 
 function escapeHTML(str) {
