@@ -93,7 +93,7 @@ resizer.addEventListener('mousedown', mouseDownHandler);
 // Chat & Ollama Logic
 // ==========================================================================
 let OLLAMA_MODEL = 'qwen2.5-coder:3b'; // Schimbă această variabilă cu modelul dorit
-const OLLAMA_URL = 'http://localhost:11434/api/chat';
+const BACKEND_URL = 'http://localhost:8000/chat'; // URL-ul serverului nostru Python
 
 let conversationHistory = [
     { role: "system", content: "Ești un asistent de programare (AI Coach). Răspunzi concis și la obiect. Când ești întrebat de cod, te uiți pe contextul furnizat." }
@@ -150,7 +150,7 @@ async function fetchOllamaResponse(userMessage, currentCode) {
     conversationHistory.push({ role: "user", content: promptMessage });
 
     try {
-        const response = await fetch(OLLAMA_URL, {
+        const response = await fetch(BACKEND_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
