@@ -7,7 +7,6 @@ def incarca_pdf_in_chroma(cale_pdf, pagina_start, pagina_stop):
     print(f"📚 Deschid cartea: {cale_pdf}...")
     
     try:
-
         document = fitz.open(cale_pdf)
     except FileNotFoundError:
         print(f"❌ Eroare: Nu am gasit {cale_pdf}. E pus in folderul D:\\Larry?")
