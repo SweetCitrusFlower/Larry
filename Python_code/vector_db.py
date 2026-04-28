@@ -7,6 +7,7 @@ class VectorDBManager:
         self.client = chromadb.PersistentClient(path=path)
         
 
+        
         self.collection = self.client.get_or_create_collection(
             name="biblioteca_algoritmi",
             metadata={"hnsw:space": "cosine"} 
