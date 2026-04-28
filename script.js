@@ -268,6 +268,52 @@ async function fetchOllamaResponse(userMessage, currentCode) {
     }
 }
 
+async function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    // Reset input so the same file can be selected again if needed
+    event.target.value = '';
+    
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+        addAiMessage("❌ Te rog să încarci doar fișiere PDF.");
+        return;
+    }
+    
+    addUserMessage(`📄 Am încărcat fișierul: ${file.name}`);
+    showTypingIndicator();
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+        const response = await fetch('http://localhost:8000/upload-pdf', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || "Eroare la procesarea PDF-ului.");
+        }
+        
+        const data = await response.json();
+        
+        removeTypingIndicator();
+        
+        // Add to history so AI remembers the context
+        const contextMsg = `[Am citit documentul ${data.filename} și am făcut acest rezumat:]\n\n${data.summary}`;
+        conversationHistory.push({ role: "assistant", content: contextMsg });
+        
+        addAiMessage(`**Rezumat pentru \`${data.filename}\`:**\n\n${data.summary}`);
+        
+    } catch (error) {
+        console.error("PDF Upload Error:", error);
+        removeTypingIndicator();
+        addAiMessage(`❌ Eroare la procesarea PDF-ului: ${error.message}`);
+    }
+}
+
 function addUserMessage(text) {
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const msgHTML = `

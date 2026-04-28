@@ -1,10 +1,11 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import requests
 import subprocess
 import tempfile
 import os
+import pdfplumber
 
 app = FastAPI()
 
@@ -90,6 +91,56 @@ async def run_code(request: RunRequest):
             except:
                 pass
 
+@app.post("/upload-pdf")
+async def upload_pdf(file: UploadFile = File(...)):
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Te rog încarcă un fișier PDF.")
+    
+    try:
+        content = await file.read()
+        
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+            tmp.write(content)
+            tmp_path = tmp.name
+            
+        text = ""
+        try:
+            with pdfplumber.open(tmp_path) as pdf:
+                for page in pdf.pages:
+                    extracted = page.extract_text()
+                    if extracted:
+                        text += extracted + "\n"
+        finally:
+            if os.path.exists(tmp_path):
+                try:
+                    os.remove(tmp_path)
+                except:
+                    pass
+                
+        if not text.strip():
+            raise HTTPException(status_code=400, detail="Nu s-a putut extrage text din PDF (posibil să conțină doar imagini scanate).")
+            
+        # Cerem rezumat la Ollama
+        prompt = f"Mai jos este textul pe care l-am extras deja dintr-un fișier PDF. Te rog citește-l și fă un rezumat concis, clar și bine structurat în limba română. Evidențiază ideile principale.\n\nTEXT EXTRAS DIN PDF:\n\"\"\"\n{text[:12000]}\n\"\"\"\n\nScrie direct rezumatul, fără să spui că nu poți citi fișiere PDF (pentru că textul ți-a fost deja dat)."
+        
+        payload = {
+            "model": "qwen2.5-coder:3b",
+            "messages": [
+                {"role": "system", "content": "Ești un expert în analizarea documentelor. Sarcina ta este să rezumi textele care îți sunt date."},
+                {"role": "user", "content": prompt}
+            ],
+            "stream": False
+        }
+        
+        response = requests.post(OLLAMA_URL, json=payload)
+        
+        if response.status_code != 200:
+            raise HTTPException(status_code=500, detail="Eroare la conectarea cu Ollama pentru generarea rezumatului.")
+            
+        return {"summary": response.json()["message"]["content"], "filename": file.filename}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

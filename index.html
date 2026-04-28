@@ -95,6 +95,10 @@
 
             <div class="input-area">
                 <div class="input-wrapper">
+                    <input type="file" id="pdf-upload" accept=".pdf" style="display: none;" onchange="handleFileUpload(event)">
+                    <button class="icon-btn" id="upload-btn" title="Încarcă un PDF pentru rezumat" onclick="document.getElementById('pdf-upload').click()" style="margin-right: 8px;">
+                        <i data-lucide="paperclip"></i>
+                    </button>
                     <textarea id="user-input" placeholder="Întreabă AI-ul..." rows="1"></textarea>
                     <button id="send-btn" class="send-btn" onclick="sendMessage()">
                         <i data-lucide="send-horizonal"></i>
