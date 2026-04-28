@@ -88,6 +88,113 @@ body {
     background-color: #1e1e1e; /* Monaco bg */
 }
 
+.code-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100px;
+}
+
+/* ==========================================================================
+   Horizontal Resizer & Console
+   ========================================================================== */
+.horizontal-resizer {
+    height: 4px;
+    background-color: var(--border-color);
+    cursor: row-resize;
+    z-index: 10;
+}
+
+.horizontal-resizer:hover, .horizontal-resizer:active {
+    background-color: var(--primary);
+}
+
+.console-section {
+    height: 250px;
+    min-height: 100px;
+    display: flex;
+    flex-direction: column;
+    background-color: #1e1e1e;
+    border-top: 1px solid var(--border-color);
+}
+
+.console-header {
+    height: 35px;
+    display: flex;
+    background-color: var(--bg-surface);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.console-tabs {
+    display: flex;
+}
+
+.c-tab {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    padding: 0 16px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    border-top: 1px solid transparent;
+    border-right: 1px solid var(--border-color);
+    font-family: var(--font-family);
+}
+
+.c-tab:hover {
+    color: #fff;
+}
+
+.c-tab.active {
+    color: #fff;
+    background-color: #1e1e1e;
+    border-top: 1px solid var(--primary);
+}
+
+.console-body {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}
+
+.tab-content {
+    display: none;
+    height: 100%;
+    width: 100%;
+    padding: 10px;
+    background: #1e1e1e;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+#console-output {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 0.85rem;
+    color: #cccccc;
+    height: 100%;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    margin: 0;
+}
+
+.error-text {
+    color: #f48771; /* Soft red for errors */
+}
+
+#console-input {
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    border: none;
+    color: #cccccc;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 0.85rem;
+    resize: none;
+    outline: none;
+}
+
 .file-tabs {
     display: flex;
     height: 100%;

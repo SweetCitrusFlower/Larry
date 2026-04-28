@@ -22,22 +22,45 @@
 <body>
 
     <div class="ide-container">
-        <!-- Left Pane: Code Editor -->
+        <!-- Left Pane: Code Editor & Console -->
         <section class="editor-pane">
-            <header class="pane-header">
-                <div class="file-tabs">
-                    <div class="tab active">
-                        <i data-lucide="file-code"></i>
-                        <span>main.py</span>
+            <div class="code-section" id="code-section">
+                <header class="pane-header">
+                    <div class="file-tabs">
+                        <div class="tab active">
+                            <i data-lucide="file-code"></i>
+                            <span>main.py</span>
+                        </div>
+                    </div>
+                    <div class="editor-actions">
+                        <button class="run-btn" onclick="runCode()">
+                            <i data-lucide="play"></i> Run
+                        </button>
+                    </div>
+                </header>
+                <div id="monaco-editor-container" class="editor-container"></div>
+            </div>
+
+            <!-- Horizontal Resizer -->
+            <div class="horizontal-resizer" id="h-dragMe"></div>
+
+            <!-- Console Section -->
+            <div class="console-section" id="console-section">
+                <header class="console-header">
+                    <div class="console-tabs">
+                        <button class="c-tab active" id="btn-tab-output" onclick="switchConsoleTab('output')">Output</button>
+                        <button class="c-tab" id="btn-tab-input" onclick="switchConsoleTab('input')">Input</button>
+                    </div>
+                </header>
+                <div class="console-body">
+                    <div id="tab-output" class="tab-content active">
+                        <pre id="console-output">Apasă 'Run' pentru a executa codul...</pre>
+                    </div>
+                    <div id="tab-input" class="tab-content">
+                        <textarea id="console-input" placeholder="Introdu datele de intrare (stdin) aici..."></textarea>
                     </div>
                 </div>
-                <div class="editor-actions">
-                    <button class="run-btn" onclick="runCode()">
-                        <i data-lucide="play"></i> Run
-                    </button>
-                </div>
-            </header>
-            <div id="monaco-editor-container" class="editor-container"></div>
+            </div>
         </section>
 
         <!-- Resizer handler between panes -->

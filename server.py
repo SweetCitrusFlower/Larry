@@ -2,6 +2,9 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import requests
+import subprocess
+import tempfile
+import os
 
 app = FastAPI()
 
@@ -18,6 +21,10 @@ class ChatRequest(BaseModel):
     model: str
     messages: list
     stream: bool = False
+
+class RunRequest(BaseModel):
+    code: str
+    input: str = ""
 
 OLLAMA_URL = "http://localhost:11434/api/chat"
 
@@ -45,6 +52,44 @@ async def chat_with_ollama(request: ChatRequest):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/run")
+async def run_code(request: RunRequest):
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False, encoding="utf-8") as f:
+        f.write(request.code)
+        temp_path = f.name
+        
+    try:
+        process = subprocess.Popen(
+            ["python", temp_path],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8"
+        )
+        
+        try:
+            stdout, stderr = process.communicate(input=request.input, timeout=5)
+            return {
+                "stdout": stdout,
+                "stderr": stderr,
+                "exit_code": process.returncode
+            }
+        except subprocess.TimeoutExpired:
+            process.kill()
+            return {
+                "stdout": "",
+                "stderr": "Error: Timeout (Codul a durat mai mult de 5 secunde. Posibilă buclă infinită).",
+                "exit_code": -1
+            }
+    finally:
+        if os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except:
+                pass
+
 
 if __name__ == "__main__":
     import uvicorn

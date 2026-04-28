@@ -10,22 +10,7 @@ require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-e
 
 require(['vs/editor/editor.main'], function() {
     editor = monaco.editor.create(document.getElementById('monaco-editor-container'), {
-        value: [
-            'def calculate_fibonacci(n):',
-            '    """Calculate the nth Fibonacci number."""',
-            '    if n <= 0:',
-            '        return 0',
-            '    elif n == 1:',
-            '        return 1',
-            '    ',
-            '    a, b = 0, 1',
-            '    for _ in range(2, n + 1):',
-            '        a, b = b, a + b',
-            '    return b',
-            '',
-            '# Test the function',
-            'print(f"Fibonacci of 10 is: {calculate_fibonacci(10)}")'
-        ].join('\n'),
+        value: '',
         language: 'python',
         theme: 'vs-dark',
         automaticLayout: true,
@@ -38,13 +23,46 @@ require(['vs/editor/editor.main'], function() {
     });
 });
 
-// Run Code function (mock)
-function runCode() {
+// Run Code function
+async function runCode() {
     if (!editor) return;
     const code = editor.getValue();
+    const inputData = document.getElementById('console-input').value;
     
-    // Simulate running code and getting output in chat
-    addAiMessage(`Se rulează \`main.py\`...\n\n\`\`\`\nOutput:\nFibonacci of 10 is: 55\n\`\`\``);
+    // Switch to output tab
+    switchConsoleTab('output');
+    const outputEl = document.getElementById('console-output');
+    outputEl.innerHTML = '<span style="color: #9cdcfe;">Se rulează codul...</span>';
+    outputEl.classList.remove('error-text');
+    
+    try {
+        const response = await fetch('http://localhost:8000/run', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: code, input: inputData })
+        });
+        
+        if (!response.ok) throw new Error("Eroare server");
+        
+        const data = await response.json();
+        
+        let finalText = "";
+        if (data.stdout) finalText += data.stdout;
+        if (data.stderr) {
+            outputEl.classList.add('error-text');
+            finalText += (finalText ? "\n" : "") + data.stderr;
+        }
+        
+        if (!finalText) {
+            finalText = "(Programul nu a afișat nimic)";
+        }
+        
+        outputEl.innerText = finalText;
+        
+    } catch (e) {
+        outputEl.classList.add('error-text');
+        outputEl.innerText = "❌ Eroare de conectare la backend (http://localhost:8000/run). Serverul Python rulează?";
+    }
 }
 
 
@@ -87,6 +105,57 @@ const mouseUpHandler = function() {
 };
 
 resizer.addEventListener('mousedown', mouseDownHandler);
+
+// ==========================================================================
+// Console & Horizontal Resizer Logic
+// ==========================================================================
+const hResizer = document.getElementById('h-dragMe');
+const topPane = document.getElementById('code-section');
+const bottomPane = document.getElementById('console-section');
+
+let h_y = 0;
+let topHeight = 0;
+
+const hMouseDownHandler = function(e) {
+    h_y = e.clientY;
+    topHeight = topPane.getBoundingClientRect().height;
+    
+    document.addEventListener('mousemove', hMouseMoveHandler);
+    document.addEventListener('mouseup', hMouseUpHandler);
+    document.body.style.userSelect = 'none';
+};
+
+const hMouseMoveHandler = function(e) {
+    const dy = e.clientY - h_y;
+    const parentHeight = topPane.parentNode.getBoundingClientRect().height;
+    const newTopHeight = ((topHeight + dy) * 100) / parentHeight;
+    
+    if (newTopHeight > 20 && newTopHeight < 80) {
+        topPane.style.flex = 'none';
+        topPane.style.height = `${newTopHeight}%`;
+        bottomPane.style.flex = '1';
+    }
+};
+
+const hMouseUpHandler = function() {
+    document.removeEventListener('mousemove', hMouseMoveHandler);
+    document.removeEventListener('mouseup', hMouseUpHandler);
+    document.body.style.userSelect = '';
+    if (editor) editor.layout(); // Refresh monaco layout
+};
+
+if(hResizer) hResizer.addEventListener('mousedown', hMouseDownHandler);
+
+// Tabs Logic
+function switchConsoleTab(tabId) {
+    document.getElementById('tab-output').classList.remove('active');
+    document.getElementById('tab-input').classList.remove('active');
+    document.getElementById('btn-tab-output').classList.remove('active');
+    document.getElementById('btn-tab-input').classList.remove('active');
+    
+    document.getElementById('tab-' + tabId).classList.add('active');
+    document.getElementById('btn-tab-' + tabId).classList.add('active');
+}
 
 
 // ==========================================================================
@@ -170,7 +239,27 @@ async function fetchOllamaResponse(userMessage, currentCode) {
         conversationHistory.push({ role: "assistant", content: aiReply });
         
         removeTypingIndicator();
-        addAiMessage(aiReply);
+        
+        // Extragem codul pentru a-l pune in editor
+        const codeBlockRegex = /```[\w]*\n([\s\S]*?)```/g;
+        let match;
+        let lastCode = null;
+        let cleanText = aiReply;
+        
+        while ((match = codeBlockRegex.exec(aiReply)) !== null) {
+            lastCode = match[1];
+        }
+        
+        if (lastCode) {
+            // Actualizăm editorul cu ultimul bloc de cod generat
+            if (editor) {
+                editor.setValue(lastCode.trim());
+            }
+            // Înlocuim blocurile de cod din textul de chat cu un mesaj informativ
+            cleanText = cleanText.replace(/```[\w]*\n([\s\S]*?)```/g, '\n<br><i style="color: #4CAF50;">(Codul a fost inserat automat în editorul din stânga)</i><br>\n');
+        }
+
+        addAiMessage(cleanText);
         
     } catch (error) {
         console.error("Ollama Error:", error);
