@@ -416,6 +416,19 @@ body {
     background-color: var(--bg-surface);
 }
 
+.attachment-preview {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: #3c3c3c;
+    border: 1px solid #555;
+    border-radius: var(--border-radius-sm);
+    margin-bottom: 8px;
+    font-size: 0.8rem;
+    color: #e0e0e0;
+}
+
 .input-wrapper {
     background-color: #3c3c3c;
     border: 1px solid transparent;

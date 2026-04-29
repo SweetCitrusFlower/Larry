@@ -6,7 +6,10 @@ import subprocess
 import tempfile
 import os
 import pdfplumber
-
+from fpdf import FPDF
+import io
+import re
+from fastapi.responses import Response
 app = FastAPI()
 
 # Permitem cereri de la orice origine (frontend-ul nostru local)
@@ -26,6 +29,9 @@ class ChatRequest(BaseModel):
 class RunRequest(BaseModel):
     code: str
     input: str = ""
+
+class GeneratePdfRequest(BaseModel):
+    text: str
 
 OLLAMA_URL = "http://localhost:11434/api/chat"
 
@@ -120,27 +126,48 @@ async def upload_pdf(file: UploadFile = File(...)):
         if not text.strip():
             raise HTTPException(status_code=400, detail="Nu s-a putut extrage text din PDF (posibil să conțină doar imagini scanate).")
             
-        # Cerem rezumat la Ollama
-        prompt = f"Mai jos este textul pe care l-am extras deja dintr-un fișier PDF. Te rog citește-l și fă un rezumat concis, clar și bine structurat în limba română. Evidențiază ideile principale.\n\nTEXT EXTRAS DIN PDF:\n\"\"\"\n{text[:12000]}\n\"\"\"\n\nScrie direct rezumatul, fără să spui că nu poți citi fișiere PDF (pentru că textul ți-a fost deja dat)."
-        
-        payload = {
-            "model": "qwen2.5-coder:3b",
-            "messages": [
-                {"role": "system", "content": "Ești un expert în analizarea documentelor. Sarcina ta este să rezumi textele care îți sunt date."},
-                {"role": "user", "content": prompt}
-            ],
-            "stream": False
-        }
-        
-        response = requests.post(OLLAMA_URL, json=payload)
-        
-        if response.status_code != 200:
-            raise HTTPException(status_code=500, detail="Eroare la conectarea cu Ollama pentru generarea rezumatului.")
-            
-        return {"summary": response.json()["message"]["content"], "filename": file.filename}
+        return {"text": text[:15000], "filename": file.filename}
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+def strip_markdown(text: str) -> str:
+    text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
+    text = re.sub(r'\*(.*?)\*', r'\1', text)
+    text = re.sub(r'`(.*?)`', r'\1', text)
+    text = re.sub(r'^#+\s*(.*)', r'\1', text, flags=re.MULTILINE)
+    return text
+
+@app.post("/generate-pdf")
+async def generate_pdf(request: GeneratePdfRequest):
+    pdf = FPDF()
+    pdf.add_page()
+    
+    font_path = "Roboto-Regular.ttf"
+    if not os.path.exists(font_path):
+        import urllib.request
+        try:
+            urllib.request.urlretrieve("https://github.com/googlefonts/roboto/raw/main/src/hinted/Roboto-Regular.ttf", font_path)
+        except:
+            pass
+            
+    if os.path.exists(font_path):
+        pdf.add_font("Roboto", "", font_path)
+        pdf.set_font("Roboto", size=12)
+    else:
+        pdf.set_font("Helvetica", size=12)
+        replacements = {'ă':'a', 'â':'a', 'î':'i', 'ș':'s', 'ț':'t', 'Ă':'A', 'Â':'A', 'Î':'I', 'Ș':'S', 'Ț':'T'}
+        for k, v in replacements.items():
+            request.text = request.text.replace(k, v)
+            
+    clean_text = strip_markdown(request.text)
+    
+    # Encoding handling for fpdf2
+    pdf.multi_cell(0, 8, txt=clean_text)
+    
+    pdf_out = bytes(pdf.output())
+    return Response(content=pdf_out, media_type="application/pdf", headers={"Content-Disposition": "attachment; filename=notite.pdf"})
+
 
 if __name__ == "__main__":
     import uvicorn

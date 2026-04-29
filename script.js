@@ -165,7 +165,7 @@ let OLLAMA_MODEL = 'qwen2.5-coder:3b'; // Schimbă această variabilă cu modelu
 const BACKEND_URL = 'http://localhost:8000/chat'; // URL-ul serverului nostru Python
 
 let conversationHistory = [
-    { role: "system", content: "Ești un asistent de programare (AI Coach). Răspunzi concis și la obiect. Când ești întrebat de cod, te uiți pe contextul furnizat." }
+    { role: "system", content: "Ești un asistent de programare și expert în analizarea documentelor (AI Coach). Răspunzi concis și la obiect. Când ești întrebat de cod, te uiți pe contextul furnizat. Trebuie să folosești mereu o gramatică impecabilă în limba română, incluzând diacritice (ă, â, î, ș, ț) și o exprimare naturală, profesională." }
 ];
 
 const userInput = document.getElementById('user-input');
@@ -173,12 +173,14 @@ const sendBtn = document.getElementById('send-btn');
 const messagesContainer = document.getElementById('messages');
 const chatContainer = document.getElementById('chat-container');
 
+let currentPdfFile = null;
+
 // Auto-resize textarea
 userInput.addEventListener('input', function() {
     this.style.height = 'auto';
     this.style.height = (this.scrollHeight < 150 ? this.scrollHeight : 150) + 'px';
     
-    if (this.value.trim() === '') {
+    if (this.value.trim() === '' && !currentPdfFile) {
         sendBtn.setAttribute('disabled', 'true');
     } else {
         sendBtn.removeAttribute('disabled');
@@ -193,11 +195,15 @@ userInput.addEventListener('keydown', function(e) {
     }
 });
 
-function sendMessage() {
+async function sendMessage() {
     const text = userInput.value.trim();
-    if (!text) return;
+    if (!text && !currentPdfFile) return;
 
-    addUserMessage(text);
+    let displayMsg = text;
+    if (currentPdfFile) {
+        displayMsg = `📎 **${currentPdfFile.name}**\n${text}`;
+    }
+    addUserMessage(displayMsg);
 
     userInput.value = '';
     userInput.style.height = 'auto';
@@ -205,8 +211,41 @@ function sendMessage() {
 
     showTypingIndicator();
 
-    let editorCode = editor ? editor.getValue() : "";
-    fetchOllamaResponse(text, editorCode);
+    if (currentPdfFile) {
+        const formData = new FormData();
+        formData.append('file', currentPdfFile);
+        const fileName = currentPdfFile.name;
+        
+        removeAttachment();
+        
+        try {
+            const response = await fetch('http://localhost:8000/upload-pdf', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || "Eroare la procesarea PDF-ului.");
+            }
+            
+            const data = await response.json();
+            const contextMsg = `[Sistem: Utilizatorul a atașat documentul ${data.filename}. Conținutul extras este:\n\n${data.text}]\n\nInstrucțiunea utilizatorului: ${text || "Citește documentul și întreabă cu ce poți ajuta."}`;
+            conversationHistory.push({ role: "system", content: contextMsg });
+            
+            let editorCode = editor ? editor.getValue() : "";
+            // We pass the user instruction or a default text to the actual chat request
+            fetchOllamaResponse(text || "Am atașat documentul. Răspunde conform instrucțiunilor sistemului.", editorCode);
+            
+        } catch (error) {
+            console.error("PDF Upload Error:", error);
+            removeTypingIndicator();
+            addAiMessage(`❌ Eroare la procesarea PDF-ului: ${error.message}`);
+        }
+    } else {
+        let editorCode = editor ? editor.getValue() : "";
+        fetchOllamaResponse(text, editorCode);
+    }
 }
 
 async function fetchOllamaResponse(userMessage, currentCode) {
@@ -268,49 +307,29 @@ async function fetchOllamaResponse(userMessage, currentCode) {
     }
 }
 
-async function handleFileUpload(event) {
+function handleFileSelect(event) {
     const file = event.target.files[0];
     if (!file) return;
-    
-    // Reset input so the same file can be selected again if needed
-    event.target.value = '';
     
     if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
         addAiMessage("❌ Te rog să încarci doar fișiere PDF.");
         return;
     }
     
-    addUserMessage(`📄 Am încărcat fișierul: ${file.name}`);
-    showTypingIndicator();
+    currentPdfFile = file;
+    document.getElementById('attachment-filename').textContent = file.name;
+    document.getElementById('attachment-preview').style.display = 'flex';
+    lucide.createIcons();
     
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    try {
-        const response = await fetch('http://localhost:8000/upload-pdf', {
-            method: 'POST',
-            body: formData
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.detail || "Eroare la procesarea PDF-ului.");
-        }
-        
-        const data = await response.json();
-        
-        removeTypingIndicator();
-        
-        // Add to history so AI remembers the context
-        const contextMsg = `[Am citit documentul ${data.filename} și am făcut acest rezumat:]\n\n${data.summary}`;
-        conversationHistory.push({ role: "assistant", content: contextMsg });
-        
-        addAiMessage(`**Rezumat pentru \`${data.filename}\`:**\n\n${data.summary}`);
-        
-    } catch (error) {
-        console.error("PDF Upload Error:", error);
-        removeTypingIndicator();
-        addAiMessage(`❌ Eroare la procesarea PDF-ului: ${error.message}`);
+    sendBtn.removeAttribute('disabled');
+}
+
+function removeAttachment() {
+    currentPdfFile = null;
+    document.getElementById('pdf-upload').value = '';
+    document.getElementById('attachment-preview').style.display = 'none';
+    if (userInput.value.trim() === '') {
+        sendBtn.setAttribute('disabled', 'true');
     }
 }
 
@@ -340,13 +359,16 @@ function addAiMessage(text) {
         .replace(/`(.*?)`/g, '<code style="background: rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 3px; font-family: monospace;">$1</code>')
         .replace(/\n/g, '<br>');
 
+    const msgId = 'msg-' + Date.now() + Math.floor(Math.random() * 1000);
+
     const msgHTML = `
         <div class="message ai-message">
             <div class="avatar ai-avatar">
                 <i data-lucide="bot"></i>
             </div>
             <div class="message-content">
-                <p>${formattedText}</p>
+                <p id="${msgId}">${formattedText}</p>
+                <button class="pdf-btn" onclick="downloadPdf('${msgId}')" style="margin-top: 8px; font-size: 0.8rem; background: #005a9e; border: none; border-radius: 4px; color: white; padding: 4px 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="download" style="width: 14px; height: 14px;"></i> Descarcă ca PDF</button>
                 <span class="timestamp">${time}</span>
             </div>
         </div>
@@ -354,6 +376,37 @@ function addAiMessage(text) {
     messagesContainer.insertAdjacentHTML('beforeend', msgHTML);
     lucide.createIcons();
     scrollToBottom();
+    
+    // Store original text
+    window[msgId + '_raw'] = text;
+}
+
+window.downloadPdf = async function(msgId) {
+    const rawText = window[msgId + '_raw'];
+    if (!rawText) return;
+    
+    try {
+        const response = await fetch('http://localhost:8000/generate-pdf', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: rawText })
+        });
+        
+        if (!response.ok) throw new Error("Eroare la generarea PDF-ului.");
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "Notite_AI.pdf";
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+    } catch (e) {
+        alert("Eroare la descărcarea PDF-ului.");
+        console.error(e);
+    }
 }
 
 function showTypingIndicator() {
@@ -391,7 +444,7 @@ function clearChat() {
     
     // Reset history
     conversationHistory = [
-        { role: "system", content: "Ești un asistent de programare (AI Coach). Răspunzi concis și la obiect. Când ești întrebat de cod, te uiți pe contextul furnizat." }
+        { role: "system", content: "Ești un asistent de programare și expert în analizarea documentelor (AI Coach). Răspunzi concis și la obiect. Când ești întrebat de cod, te uiți pe contextul furnizat. Trebuie să folosești mereu o gramatică impecabilă în limba română, incluzând diacritice (ă, â, î, ș, ț) și o exprimare naturală, profesională." }
     ];
 }
 
