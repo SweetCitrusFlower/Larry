@@ -10,6 +10,7 @@ from fpdf import FPDF
 import io
 import re
 from fastapi.responses import Response
+import markdown
 app = FastAPI()
 
 # Permitem cereri de la orice origine (frontend-ul nostru local)
@@ -132,10 +133,7 @@ async def upload_pdf(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 def strip_markdown(text: str) -> str:
-    text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
-    text = re.sub(r'\*(.*?)\*', r'\1', text)
-    text = re.sub(r'`(.*?)`', r'\1', text)
-    text = re.sub(r'^#+\s*(.*)', r'\1', text, flags=re.MULTILINE)
+    text = re.sub(r'^#+\s*(.*)', r'<h2>\1</h2>', text, flags=re.MULTILINE)
     return text
 
 @app.post("/generate-pdf")
@@ -143,16 +141,26 @@ async def generate_pdf(request: GeneratePdfRequest):
     pdf = FPDF()
     pdf.add_page()
     
-    font_path = "Roboto-Regular.ttf"
-    if not os.path.exists(font_path):
-        import urllib.request
-        try:
-            urllib.request.urlretrieve("https://github.com/googlefonts/roboto/raw/main/src/hinted/Roboto-Regular.ttf", font_path)
-        except:
-            pass
+    import urllib.request
+    base_url = "https://github.com/googlefonts/roboto/raw/main/src/hinted/"
+    fonts = {
+        '': 'Roboto-Regular.ttf',
+        'B': 'Roboto-Bold.ttf',
+        'I': 'Roboto-Italic.ttf'
+    }
+    
+    font_loaded = True
+    for style, fname in fonts.items():
+        if not os.path.exists(fname):
+            try:
+                urllib.request.urlretrieve(base_url + fname, fname)
+            except:
+                font_loaded = False
+                break
+        if font_loaded:
+            pdf.add_font("Roboto", style=style, fname=fname)
             
-    if os.path.exists(font_path):
-        pdf.add_font("Roboto", "", font_path)
+    if font_loaded:
         pdf.set_font("Roboto", size=12)
     else:
         pdf.set_font("Helvetica", size=12)
@@ -160,10 +168,11 @@ async def generate_pdf(request: GeneratePdfRequest):
         for k, v in replacements.items():
             request.text = request.text.replace(k, v)
             
-    clean_text = strip_markdown(request.text)
+    # Convert markdown to html
+    html = markdown.markdown(request.text, extensions=['fenced_code', 'tables'])
     
-    # Encoding handling for fpdf2
-    pdf.multi_cell(0, 8, txt=clean_text)
+    # fpdf2 write_html method natively handles standard html tags
+    pdf.write_html(html)
     
     pdf_out = bytes(pdf.output())
     return Response(content=pdf_out, media_type="application/pdf", headers={"Content-Disposition": "attachment; filename=notite.pdf"})
