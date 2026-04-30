@@ -13,6 +13,7 @@ class Task(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     daily_plan_id: Mapped[int] = mapped_column(ForeignKey("daily_plans.id"))
     title: Mapped[str]
+    problem_id: Mapped[str] # External ID from the open-source problem dataset
     description: Mapped[str] # Markdown description of the problem
     starter_code: Mapped[str]
     hidden_solution: Mapped[str]

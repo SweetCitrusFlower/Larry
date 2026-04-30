@@ -1,10 +1,11 @@
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
+from typing import Optional, List
 
 class DailyPlanBase(BaseModel):
     day_number: int
+    topics: str
     theoretical_topic_content: str
-    completion_status: Optional[bool] = False
+    completion_status: bool = False
 
 class DailyPlanCreate(DailyPlanBase):
     journey_id: int
@@ -18,3 +19,19 @@ class DailyPlanResponse(DailyPlanBase):
     journey_id: int
 
     model_config = ConfigDict(from_attributes=True)
+
+# Schema for the AI Master Planner to ensure structured output
+class PlannerDayOutput(BaseModel):
+    day_number: int
+    topics: str
+    theoretical_topic_summary: str
+    problem_title: str
+    problem_description: str
+    problem_starter_code: str
+    problem_hidden_solution: str
+
+class PlannerJourneyOutput(BaseModel):
+    title: str
+    objectives: str
+    total_days: int
+    days: List[PlannerDayOutput]
