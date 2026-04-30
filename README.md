@@ -1,3 +1,131 @@
-# Larry
+# Larry: AI Coding Coaching Platform
 
-## de verificat requirements.txt
+**Version:** 1.0.0-Baseline (t0)
+
+Larry is a next-generation, web-based AI Coding Coaching platform. Designed from scratch using a Multi-Agent System (MAS) and Retrieval-Augmented Generation (RAG), Larry provides users with personalized learning journeys, dynamic curriculum generation, and an isolated, real-time code execution environment. 
+
+This document serves as the official baseline (t0) architecture and project documentation.
+
+---
+
+## 🏗 Architecture Overview
+
+The system is designed with a modern decoupled architecture, separating the client interface from the backend API, the AI orchestration layer, and the isolated code evaluation environment.
+
+```mermaid
+graph TD
+    UI[Frontend: React/Vite + Monaco] -->|REST API + JWT| API[Backend: FastAPI]
+    
+    subgraph Backend Infrastructure
+        API --> DB[(PostgreSQL)]
+        API --> redis[(Redis)]
+        API --> agents[LangChain Agent Layer]
+    end
+    
+    subgraph Multi-Agent System
+        agents --> Planner[Master Planner Agent]
+        agents --> Creator[Content Creator Agent]
+        agents --> Tutor[Socratic Tutor Agent]
+    end
+    
+    subgraph Knowledge & Intelligence
+        agents <--> RAG[RAG Pipeline]
+        RAG <--> VectorDB[(ChromaDB)]
+        agents <--> HybridLLM{Hybrid LLM Layer}
+        HybridLLM --> Commercial(Gemini/OpenAI)
+        HybridLLM --> Local(Ollama Server)
+    end
+    
+    subgraph Code Execution
+        UI -->|Code Submission| Judge[Judge0 Isolated Env]
+        API -->|Scoring Validation| Judge
+    end
+```
+
+### 1. Hybrid LLM Architecture
+Larry uses a cost-effective and highly capable hybrid model strategy:
+- **Commercial APIs (e.g., Gemini Pro):** Utilized by the Master Planner Agent for complex reasoning, long-term journey generation, and high-level curriculum design.
+- **Local Open Source Models (e.g., Llama 3 via Ollama):** Run locally via Docker to handle high-volume interactions like the Socratic Tutor and repetitive Content Creation tasks, dramatically reducing API costs.
+
+### 2. Multi-Agent System (LangChain)
+- **Master Planner:** Analyzes user prompts to generate a structural `Journey` with specific `objectives` spanning multiple days.
+- **Content Creator:** Generates the theoretical content and curates specific coding `Tasks` (problems) for a `DailyPlan`.
+- **Socratic Tutor:** Acts as a conversational sidekick, reading user submissions and guiding them toward solutions without giving away direct answers.
+
+---
+
+## 💻 Technology Stack
+
+| Component | Technology | Description |
+| :--- | :--- | :--- |
+| **Frontend** | React (Vite) | UI layer, leveraging `@monaco-editor/react` for the code editor interface. |
+| **Backend API** | FastAPI (Python) | High-performance asynchronous REST framework. |
+| **ORM & DB** | SQLAlchemy 2.0 | Modern database interaction utilizing `Mapped` and `mapped_column` paradigms. |
+| **Relational DB** | PostgreSQL | Primary datastore mapped to port 5440 via Docker Compose. |
+| **Vector DB** | ChromaDB | Local vector store for the RAG pipeline to index books/courses. |
+| **Caching/Queue** | Redis | To be used for task queues (e.g., Celery) and rapid state caching. |
+| **AI Orchestration** | LangChain | Managing agent states, prompts, and vector database interactions. |
+| **Code Execution** | Judge0 | Secure, sandboxed code execution engine. |
+
+---
+
+## 📂 Project Structure
+
+```text
+Larry/
+├── backend/
+│   ├── app/
+│   │   ├── agents/          # Multi-Agent logic (Planner, Creator, Tutor)
+│   │   ├── api/             # REST endpoints (routers) and dependencies
+│   │   ├── core/            # Security (JWT, bcrypt) and global config
+│   │   ├── crud/            # Database access layer
+│   │   ├── db/              # SQLAlchemy session and initialization
+│   │   ├── models/          # SQLAlchemy 2.0 ORM Entities
+│   │   ├── schemas/         # Pydantic v2 Data Validation models
+│   │   └── services/        # RAG pipeline and business logic
+│   ├── main.py              # FastAPI application entry point
+│   └── requirements.txt     # Python dependencies
+├── frontend/                # React (Vite) Client Application
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   └── App.jsx          # Main App + Monaco Editor implementation
+│   └── package.json
+├── infrastructure/
+│   └── judge0/              # Configuration for Judge0 isolation
+├── docker-compose.yml       # Orchestration for PostgreSQL, ChromaDB, Redis, Ollama
+└── .gitignore
+```
+
+---
+
+## 🗄️ Database Schema
+
+The core relational data layer (PostgreSQL) is structured chronologically along the user's learning path:
+
+1. **User**: Authenticable entity (`email`, `hashed_password`).
+2. **KnowledgeSource**: Tracks RAG documents (books, PDFs) uploaded to ChromaDB.
+3. **Journey**: The top-level learning path created by the Planner Agent based on user prompts.
+4. **DailyPlan**: A specific day within a Journey, containing theoretical content generated by the Creator Agent.
+5. **Task (Problem)**: Specific coding challenges assigned to a DailyPlan.
+6. **UserSubmission**: Code written in the Monaco Editor, evaluated by Judge0, and tied to both the User and the Task.
+
+---
+
+## 🚀 Current Baseline Status (t0)
+
+At `t0`, the core structural and traditional backend foundation is complete:
+
+✅ **Infrastructure Setup**: Docker Compose file configured for Postgres, ChromaDB, Redis, and Ollama.  
+✅ **Relational Database**: SQLAlchemy 2.0 Models implemented with proper relationships.  
+✅ **API Data Layer**: Pydantic v2 Schemas and Modular CRUD operations established.  
+✅ **Security**: Robust JWT authentication and direct `bcrypt` password hashing implemented (resolving previous legacy library constraints).  
+✅ **Routing Layer**: FastAPI endpoints for Auth, Journeys, DailyPlans, Tasks, Submissions, and KnowledgeSources are built, with ownership validation active.  
+✅ **Frontend Scaffold**: Base Vite React app initiated featuring a test API connection and the Monaco Editor component.  
+
+## 🛣️ Next Steps
+
+1. **AI Agent Implementation**: Begin utilizing LangChain within the `backend/app/agents/` directory to build the Master Planner and Content Creator.
+2. **RAG Pipeline**: Implement PDF/Text ingestion scripts that chunk and embed data into ChromaDB.
+3. **Code Execution Integration**: Fully configure Judge0 in the Docker stack and connect the `UserSubmission` endpoints to evaluate actual code against hidden test cases.
+4. **Frontend UI Expansion**: Build out the React dashboard to visualize Journeys, display the daily Markdown theory, and integrate the Socratic Tutor chat interface alongside the code editor.
