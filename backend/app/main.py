@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,16 +13,21 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="AI Coding Coaching Platform", lifespan=lifespan)
 
 origins = [
-    "http://localhost:5173",    # Portul tău de React/Vite
-    "http://127.0.0.1:5173",  # Uneori Windows preferă IP-ul în loc de localhost
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
+
+# Add production origins from environment if present
+env_origins = os.getenv("ALLOWED_ORIGINS")
+if env_origins:
+    origins.extend(env_origins.split(","))
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,            # Permitem aceste adrese
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],              # Permitem toate metodele (GET, POST, etc.)
-    allow_headers=["*"],              # Permitem toate headerele
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "Accept", "X-Requested-With"],
 )
 
 app.include_router(api_router, prefix="/api/v1")
