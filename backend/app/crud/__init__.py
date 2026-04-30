@@ -4,3 +4,4 @@ from .crud_journey import get_journey, get_journeys_by_user, create_journey, upd
 from .crud_daily_plan import get_daily_plan, get_daily_plans_by_journey, create_daily_plan, update_daily_plan, delete_daily_plan
 from .crud_task import get_task, get_tasks_by_daily_plan, create_task, update_task, delete_task
 from .crud_user_submission import get_user_submission, get_submissions_by_user, get_submissions_by_task, create_user_submission, update_user_submission, delete_user_submission
+from .crud_chat_message import get_chat_message, get_chat_messages_by_user, create_chat_message, delete_chat_message
