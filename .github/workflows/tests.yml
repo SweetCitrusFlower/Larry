@@ -45,6 +45,6 @@ jobs:
         cd backend
         python -m pytest --cov=app tests/ -v
       env:
-        DATABASE_URL: sqlite:///:memory:
+        DATABASE_URL: sqlite:///:memory
         TESTING: "true"
         LARRY_EVAL_MODE: mock
