@@ -4,10 +4,10 @@ from datetime import datetime
 
 class JourneyBase(BaseModel):
     title: str
-    initial_user_prompt: str
+    initial_user_prompt: str # The "prompt" from frontend
     objectives: str
-    total_days: int
-    status: Optional[str] = "active"
+    total_days: int # The "timeframe" from frontend
+    status: str = "active"
 
 class JourneyCreate(JourneyBase):
     user_id: int
