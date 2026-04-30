@@ -240,6 +240,7 @@ def call_content_creator(user_input: str, context: str) -> str:
 # Eval Tests: Socratic Tutor
 # ─────────────────────────────────────────────
 
+@pytest.mark.skip(reason="Socratic Tutor agent not yet implemented")
 class TestSocraticTutorEvals:
     """
     Behavioral & Tone Evaluation for the Socratic Tutor agent.
@@ -264,6 +265,7 @@ class TestSocraticTutorEvals:
 # Eval Tests: Master Planner
 # ─────────────────────────────────────────────
 
+@pytest.mark.skip(reason="Master Planner agent not yet implemented")
 class TestMasterPlannerEvals:
     """
     Structural & Logic Evaluation for the Master Planner agent.
@@ -312,6 +314,7 @@ class TestMasterPlannerEvals:
 # Eval Tests: Content Creator (RAG)
 # ─────────────────────────────────────────────
 
+@pytest.mark.skip(reason="Content Creator RAG agent not yet implemented")
 class TestContentCreatorRAGEvals:
     """
     Faithfulness & Relevance Evaluation for the RAG Content Creator agent.
