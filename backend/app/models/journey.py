@@ -18,7 +18,7 @@ class Journey(Base):
     objectives: Mapped[str] # Could be stored as JSON, using string for simplicity initially
     start_date: Mapped[datetime] = mapped_column(default=datetime.utcnow)
     total_days: Mapped[int]
-    status: Mapped[str] = mapped_column(default="active") # active, completed, abandoned
+    status: Mapped[str] = mapped_column(default="active") # active, paused, completed, abandoned
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="journeys")

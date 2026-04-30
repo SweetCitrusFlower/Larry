@@ -3,6 +3,7 @@ from typing import Optional
 
 class TaskBase(BaseModel):
     title: str
+    problem_id: str
     description: str
     starter_code: str
     hidden_solution: str
