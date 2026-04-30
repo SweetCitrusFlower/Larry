@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: aicoach-postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: aicoach
+    ports:
+      - "5440:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  vectordb:
+    image: chromadb/chroma:latest
+    container_name: aicoach-chromadb
+    ports:
+      - "8000:8000"
+    volumes:
+      - chromadata:/chroma/chroma
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    container_name: aicoach-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: aicoach-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollamadata:/root/.ollama
+    # Note: For GPU support, you would need to add deploy configurations here
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    restart: unless-stopped
+
+  # judge0:
+  #   # Placeholder for Judge0 code execution environment.
+  #   # Judge0 setup typically requires multiple services (server, worker, db, redis)
+  #   # To be fully configured later.
+  #   image: judge0/judge0:1.13.0
+  #   ...
+
+volumes:
+  pgdata:
+  chromadata:
+  ollamadata:

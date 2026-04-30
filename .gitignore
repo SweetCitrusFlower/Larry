@@ -1,0 +1,27 @@
+# --- Python (Backend) ---
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc
+.env
+
+# --- Node.js (Frontend) ---
+# Ignoră folderul gigant de dependențe
+node_modules/
+
+# Ignoră folderul de build (unde se generează site-ul final)
+dist/
+build/
+.next/
+
+# Log-uri de eroare de la npm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- Editor & System ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
