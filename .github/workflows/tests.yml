@@ -2,7 +2,7 @@ name: Python Tests
 
 on:
   push:
-    branches: [ main, teste_automate ]
+    branches: [ main, teste_automate, refactor/architekturson ]
   pull_request:
     branches: [ main ]
 
