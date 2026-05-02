@@ -112,6 +112,43 @@ The core relational data layer (PostgreSQL) is structured chronologically along 
 
 ---
 
+## 🔄 Database Migrations (Alembic)
+
+The project uses [Alembic](https://alembic.sqlalchemy.org/) to handle schema changes. It is fully integrated with our SQLAlchemy 2.0 models and automatically resolves the database URL.
+
+All migration commands must be run from inside the `backend/` directory with the virtual environment activated:
+
+```bash
+# 1. Generate a new migration script automatically after changing models in app/models/
+alembic revision --autogenerate -m "description_of_changes"
+
+# 2. Apply the migration to the database
+alembic upgrade head
+
+# 3. Rollback the last applied migration
+alembic downgrade -1
+```
+
+---
+
+## 🧠 RAG Ingestion Pipeline (Vertex AI)
+
+The core RAG (Retrieval-Augmented Generation) ingestion module has been fully implemented. It processes uploaded PDFs asynchronously without blocking the FastAPI event loop.
+
+- **Native Vision Extraction**: Uses the `google-cloud-aiplatform` SDK to send raw PDF bytes to Gemini as inline multimodal data, enforcing strict Markdown output with detailed visual descriptions.
+- **Smart Chunking**: LangChain's `MarkdownHeaderTextSplitter` semantically segments the text while preserving structural header context in the metadata.
+- **Vector Storage**: Uses Google's Vertex Embeddings (`text-embedding-004`) to embed the chunks and stores them in our Dockerized ChromaDB instance (`larry_knowledge_base` collection).
+
+**Google Cloud Setup Requirement:**
+To run the RAG pipeline locally, you must authenticate with Google Cloud using Application Default Credentials (ADC):
+```bash
+gcloud auth application-default login
+gcloud config set project [YOUR_GCP_PROJECT_ID]
+```
+*(Ensure `VERTEX_MODEL_NAME`, `VERTEX_EMBEDDING_MODEL`, `CHROMA_HOST`, and `CHROMA_PORT` are defined in your `.env` file).*
+
+---
+
 ## 🚀 Current Baseline Status (t0)
 
 At `t0`, the core structural and traditional backend foundation is complete:
@@ -122,10 +159,10 @@ At `t0`, the core structural and traditional backend foundation is complete:
 ✅ **Security**: Robust JWT authentication and direct `bcrypt` password hashing implemented (resolving previous legacy library constraints).  
 ✅ **Routing Layer**: FastAPI endpoints for Auth, Journeys, DailyPlans, Tasks, Submissions, and KnowledgeSources are built, with ownership validation active.  
 ✅ **Frontend Scaffold**: Base Vite React app initiated featuring a test API connection and the Monaco Editor component.  
+✅ **RAG Pipeline**: Vertex AI Gemini multi-modal PDF extraction, LangChain chunking, and ChromaDB vectorization integrated via an async `/upload` endpoint.
 
 ## 🛣️ Next Steps
 
 1. **AI Agent Implementation**: Begin utilizing LangChain within the `backend/app/agents/` directory to build the Master Planner and Content Creator.
-2. **RAG Pipeline**: Implement PDF/Text ingestion scripts that chunk and embed data into ChromaDB.
-3. **Code Execution Integration**: Fully configure Judge0 in the Docker stack and connect the `UserSubmission` endpoints to evaluate actual code against hidden test cases.
-4. **Frontend UI Expansion**: Build out the React dashboard to visualize Journeys, display the daily Markdown theory, and integrate the Socratic Tutor chat interface alongside the code editor.
+2. **Code Execution Integration**: Fully configure Judge0 in the Docker stack and connect the `UserSubmission` endpoints to evaluate actual code against hidden test cases.
+3. **Frontend UI Expansion**: Build out the React dashboard to visualize Journeys, display the daily Markdown theory, and integrate the Socratic Tutor chat interface alongside the code editor.

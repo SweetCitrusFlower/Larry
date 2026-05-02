@@ -112,6 +112,9 @@ xxhash==3.7.0
 yarl==1.23.0
 zipp==3.23.1
 zstandard==0.25.0
+google-cloud-aiplatform
+langchain-google-vertexai
+python-multipart
 pytest==8.2.0
 pytest-asyncio==0.23.6
 pytest-cov==5.0.0
