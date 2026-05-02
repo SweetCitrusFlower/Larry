@@ -1,25 +1,34 @@
 from datetime import datetime
 from typing import List, TYPE_CHECKING
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, JSON, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.database import Base
 
 if TYPE_CHECKING:
     from app.models.user import User
-    from app.models.daily_plan import DailyPlan
 
 class Journey(Base):
     __tablename__ = "journeys"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    title: Mapped[str]
-    initial_user_prompt: Mapped[str]
-    objectives: Mapped[str] # Could be stored as JSON, using string for simplicity initially
-    start_date: Mapped[datetime] = mapped_column(default=datetime.utcnow)
-    total_days: Mapped[int]
-    status: Mapped[str] = mapped_column(default="active") # active, paused, completed, abandoned
+    original_prompt: Mapped[str] = mapped_column(String)
+    target_days: Mapped[int] = mapped_column(default=1)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="journeys")
     daily_plans: Mapped[List["DailyPlan"]] = relationship(back_populates="journey", cascade="all, delete-orphan")
+
+class DailyPlan(Base):
+    __tablename__ = "daily_plans"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    journey_id: Mapped[int] = mapped_column(ForeignKey("journeys.id"))
+    day_number: Mapped[int]
+    title: Mapped[str] = mapped_column(String)
+    concepts_to_cover: Mapped[list] = mapped_column(JSON)
+    difficulty: Mapped[str] = mapped_column(String)
+
+    # Relationships
+    journey: Mapped["Journey"] = relationship(back_populates="daily_plans")
