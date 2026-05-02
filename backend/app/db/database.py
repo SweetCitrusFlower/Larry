@@ -26,7 +26,6 @@ def init_db():
         user,
         knowledge_source,
         journey,
-        daily_plan,
         task,
         user_submission,
         chat_message,
