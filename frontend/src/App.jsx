@@ -1,33 +1,50 @@
 import React, { useState, useEffect } from 'react';
-import Editor from '@monaco-editor/react';
-import axios from 'axios';
+import Navbar from './components/Navbar';
+import Sidebar from './components/Sidebar';
+import EditorPane from './components/EditorPane';
+import ConsolePane from './components/ConsolePane';
+import ChatPane from './components/ChatPane';
+import AuthModal from './components/AuthModal';
 
 function App() {
-  const [status, setStatus] = useState('Checking backend status...');
-
-  useEffect(() => {
-    axios.get('http://127.0.0.1:8000')
-      .then(response => {
-        setStatus(response.data.status);
-      })
-      .catch(error => {
-        setStatus('Backend is not reachable');
-        console.error(error);
-      });
-  }, []);
+  const [language, setLanguage] = useState('python');
+  const [code, setCode] = useState('# Write your code here\nprint("Hello Larry!")');
+  const [output, setOutput] = useState('');
+  const [input, setInput] = useState('');
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
-      <h1>AI Coding Coaching Platform</h1>
-      <p>Backend Status: <strong>{status}</strong></p>
+    <div className="app-container">
+      <Navbar 
+        language={language} 
+        setLanguage={setLanguage} 
+        onLoginClick={() => setIsAuthModalOpen(true)}
+      />
       
-      <div style={{ marginTop: '20px', border: '1px solid #ccc', height: '400px' }}>
-        <Editor
-          height="100%"
-          defaultLanguage="python"
-          defaultValue="# Write your python code here"
-        />
-      </div>
+      <main className="main-layout">
+        <Sidebar />
+        
+        <div className="center-pane">
+          <EditorPane 
+            language={language} 
+            code={code} 
+            setCode={setCode} 
+          />
+          <ConsolePane 
+            output={output} 
+            input={input} 
+            setInput={setInput} 
+          />
+        </div>
+        
+        <ChatPane />
+      </main>
+
+      <AuthModal 
+        isOpen={isAuthModalOpen} 
+        onClose={() => setIsAuthModalOpen(false)} 
+      />
+
     </div>
   );
 }
