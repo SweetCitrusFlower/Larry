@@ -1,83 +1,129 @@
 import React, { useState } from 'react';
+import { authAPI } from '../services/api';
+import { LogIn, UserPlus, X, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-const AuthModal = ({ isOpen, onClose }) => {
+const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
   const [isLogin, setIsLogin] = useState(true);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [formData, setFormData] = useState({ email: '', password: '', confirmPassword: '' });
 
   if (!isOpen) return null;
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      if (isLogin) {
+        const response = await authAPI.login({ email: formData.email, password: formData.password });
+        localStorage.setItem('token', response.data.access_token);
+        onAuthSuccess();
+        onClose();
+      } else {
+        if (formData.password !== formData.confirmPassword) {
+          throw new Error('Passwords do not match');
+        }
+        await authAPI.register({ email: formData.email, password: formData.password });
+        setIsLogin(true);
+        setError('Account created! Please login.');
+      }
+    } catch (err) {
+      setError(err.response?.data?.detail || err.message || 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content fade-in" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <div className="modal-tabs">
-            <button 
-              className={isLogin ? 'active' : ''} 
-              onClick={() => setIsLogin(true)}
-            >
-              Login
-            </button>
-            <button 
-              className={!isLogin ? 'active' : ''} 
-              onClick={() => setIsLogin(false)}
-            >
-              Register
-            </button>
-          </div>
-          <button className="close-btn" onClick={onClose}>&times;</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="w-full max-w-md glass-card p-8 relative"
+      >
+        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white">
+          <X size={20} />
+        </button>
+
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold text-white mb-2">
+            {isLogin ? 'Welcome Back' : 'Join Larry'}
+          </h2>
+          <p className="text-slate-400">
+            {isLogin ? 'Continue your AI coaching journey' : 'Start your personalized learning roadmap'}
+          </p>
         </div>
 
-        <form className="auth-form" onSubmit={e => e.preventDefault()}>
-          <div className="form-group">
-            <label>Email</label>
-            <input type="email" placeholder="name@company.com" required />
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Email</label>
+            <input
+              type="email"
+              required
+              className="input-field"
+              placeholder="you@example.com"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            />
           </div>
-          <div className="form-group">
-            <label>Password</label>
-            <input type="password" placeholder="••••••••" required />
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Password</label>
+            <input
+              type="password"
+              required
+              className="input-field"
+              placeholder="••••••••"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            />
           </div>
-          
+
           {!isLogin && (
-            <div className="form-group">
-              <label>Confirm Password</label>
-              <input type="password" placeholder="••••••••" required />
-            </div>
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Confirm Password</label>
+              <input
+                type="password"
+                required
+                className="input-field"
+                placeholder="••••••••"
+                value={formData.confirmPassword}
+                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+              />
+            </motion.div>
           )}
 
-          <div className="form-options">
-            <label className="checkbox-container">
-              <input 
-                type="checkbox" 
-                checked={rememberMe} 
-                onChange={(e) => setRememberMe(e.target.checked)} 
-              />
-              <span className="checkmark"></span>
-              Remember me
-            </label>
-            {isLogin && <a href="#forgot" className="forgot-link">Forgot password?</a>}
-          </div>
+          <AnimatePresence>
+            {error && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className={`p-3 rounded-lg text-sm ${error.includes('created') ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}
+              >
+                {error}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          <button className="submit-btn">
+          <button type="submit" disabled={loading} className="btn-primary w-full flex items-center justify-center gap-2 py-3">
+            {loading ? <Loader2 className="animate-spin" /> : isLogin ? <LogIn size={18} /> : <UserPlus size={18} />}
             {isLogin ? 'Sign In' : 'Create Account'}
           </button>
-
-          <div className="divider">
-            <span>or continue with</span>
-          </div>
-
-          <div className="social-auth">
-            <button className="social-btn">
-              <svg width="20" height="20" viewBox="0 0 24 24"><path d="M12.48 10.92v3.28h7.84c-.24 1.84-.909 3.16-2.11 4.35-1.41 1.41-3.61 2.32-6.21 2.32-4.81 0-8.72-3.89-8.72-8.72s3.91-8.72 8.72-8.72c2.6 0 4.5 1.02 5.9 2.34l2.3-2.3c-2.1-1.99-4.79-3.12-8.2-3.12C5.42 1 0 6.42 0 13s5.42 12 12.48 12c3.81 0 6.69-1.26 8.89-3.56 2.2-2.2 2.91-5.34 2.91-8.02 0-.69-.05-1.35-.15-1.94h-11.64z" fill="currentColor"/></svg>
-              Google
-            </button>
-            <button className="social-btn">
-              <svg width="20" height="20" viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.43.372.823 1.102.823 2.222 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" fill="currentColor"/></svg>
-              GitHub
-            </button>
-          </div>
         </form>
-      </div>
 
+        <div className="mt-6 text-center">
+          <button 
+            onClick={() => setIsLogin(!isLogin)}
+            className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+          >
+            {isLogin ? "Don't have an account? Register" : "Already have an account? Login"}
+          </button>
+        </div>
+      </motion.div>
     </div>
   );
 };
