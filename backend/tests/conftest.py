@@ -26,7 +26,7 @@ from app.main import app                                       # noqa: E402
 
 # Import all models so SQLAlchemy registers them on Base.metadata
 from app.models import (                                       # noqa: E402, F401
-    user, knowledge_source, journey, daily_plan, task, user_submission
+    user, knowledge_source, journey, task, user_submission
 )
 
 # ── Single in-memory engine shared across the whole test session ─────────────

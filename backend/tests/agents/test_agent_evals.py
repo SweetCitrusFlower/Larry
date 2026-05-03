@@ -190,8 +190,9 @@ def validate_planner_structure(agent_response: str, expected_days: int) -> dict:
         data = json.loads(agent_response)
         result["valid_json"] = True
         result["parsed"] = data
-        days = data.get("days", [])
-        result["correct_day_count"] = len(days) == expected_days
+        # Update to match JourneyRoadmap schema
+        daily_plans = data.get("daily_plans", [])
+        result["correct_day_count"] = len(daily_plans) == expected_days
     except (json.JSONDecodeError, AttributeError):
         pass
     return result
@@ -212,19 +213,21 @@ def call_socratic_tutor(user_input: str) -> str:
 
 
 def call_master_planner(user_input: str) -> str:
-    """Stub: Replace with a real call to the Master Planner agent."""
-    # TODO: return await planner_agent.arun(user_input)
-    
-    # Simple dynamic stub: try to find a number followed by "-day" or " day"
+    """Real call to the Master Planner agent (bridged to sync for pytest)."""
+    import asyncio
     import re
+    from app.agents.master_planner import generate_roadmap
+    
+    # Extract target_days from input (e.g. "5-day roadmap")
     match = re.search(r"(\d+)-?day", user_input, re.IGNORECASE)
     num_days = int(match.group(1)) if match else 5
     
-    days = []
-    for i in range(1, num_days + 1):
-        days.append({"day": i, "topic": f"Topic for Day {i}"})
-        
-    return json.dumps({"days": days})
+    try:
+        # Run the async agent call synchronously for the test
+        roadmap = asyncio.run(generate_roadmap(user_input, num_days))
+        return roadmap.model_dump_json()
+    except Exception as e:
+        return f"ERROR: {str(e)}"
 
 
 def call_content_creator(user_input: str, context: str) -> str:
@@ -267,7 +270,7 @@ class TestSocraticTutorEvals:
 # Eval Tests: Master Planner
 # ─────────────────────────────────────────────
 
-@pytest.mark.skip(reason="Master Planner agent not yet implemented")
+# @pytest.mark.skip(reason="Master Planner agent is now implemented")
 class TestMasterPlannerEvals:
     """
     Structural & Logic Evaluation for the Master Planner agent.
@@ -296,7 +299,7 @@ class TestMasterPlannerEvals:
         assert result["correct_day_count"], (
             f"[{eval_case.case_id}] Planner returned wrong number of days.\n"
             f"Expected: {expected_days}, "
-            f"Got: {len(result['parsed'].get('days', [])) if result['parsed'] else 'N/A'}"
+            f"Got: {len(result['parsed'].get('daily_plans', [])) if result['parsed'] else 'N/A'}"
         )
 
     @pytest.mark.parametrize("eval_case", PLANNER_EVAL_CASES, ids=[c.case_id for c in PLANNER_EVAL_CASES])

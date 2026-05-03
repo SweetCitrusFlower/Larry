@@ -41,7 +41,9 @@ async def generate_new_journey(
         db_journey = Journey(
             user_id=current_user.id,
             original_prompt=request.prompt,
-            target_days=request.target_days
+            target_days=request.target_days,
+            journey_title=roadmap.journey_title,
+            overview=roadmap.overview
         )
         db.add(db_journey)
         
