@@ -17,12 +17,177 @@ function App() {
   };
 
   return (
+<<<<<<< HEAD
+    <div className="auth-bg">
+      <div className="auth-card">
+        <div className="auth-logo">⚡ Larry</div>
+        <h1 className="auth-title">AI Coding Coach</h1>
+        <p className="auth-sub">{mode === 'login' ? 'Bun venit înapoi!' : 'Creează un cont nou'}</p>
+
+        <div className="auth-tabs">
+          <button className={mode === 'login' ? 'active' : ''} onClick={() => setMode('login')}>Login</button>
+          <button className={mode === 'register' ? 'active' : ''} onClick={() => setMode('register')}>Register</button>
+        </div>
+
+        <form onSubmit={submit} className="auth-form">
+          <label>Email</label>
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required />
+          <label>Parolă</label>
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required />
+          {error && <p className={`auth-msg ${error.includes('creat') ? 'ok' : 'err'}`}>{error}</p>}
+          <button type="submit" className="btn-primary" disabled={loading}>
+            {loading ? 'Se procesează...' : mode === 'login' ? 'Intră în cont' : 'Creează cont'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// GENERATE MODAL
+// ════════════════════════════════════════════════════════════════════════════
+function GenerateModal({ onClose, onGenerated }) {
+  const [prompt, setPrompt] = useState('');
+  const [days, setDays] = useState(7);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const submit = async e => {
+    e.preventDefault();
+    setError(''); setLoading(true);
+    try {
+      const res = await api.post('/journeys/generate', { prompt, target_days: days });
+      onGenerated(res.data);
+      onClose();
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Eroare la generare.');
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-card" onClick={e => e.stopPropagation()}>
+        <button className="modal-close" onClick={onClose}>✕</button>
+        <h2>🗺️ Generează Roadmap Nou</h2>
+        <form onSubmit={submit}>
+          <label>Ce vrei să înveți?</label>
+          <textarea
+            value={prompt}
+            onChange={e => setPrompt(e.target.value)}
+            placeholder="ex: React, Docker, Algoritmi de sortare..."
+            rows={3}
+            required
+          />
+          <label>Număr de zile: <strong>{days}</strong></label>
+          <input type="range" min={3} max={30} value={days} onChange={e => setDays(+e.target.value)} />
+          {error && <p className="auth-msg err">{error}</p>}
+          <button type="submit" className="btn-primary" disabled={loading}>
+            {loading ? (
+              <span className="spinner-row">
+                <span className="spin" /> Generez cu AI...
+              </span>
+            ) : '✨ Generează'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// ROADMAP CARD
+// ════════════════════════════════════════════════════════════════════════════
+function RoadmapCard({ journey }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className={`roadmap-card ${open ? 'expanded' : ''}`}>
+      <div className="roadmap-header" onClick={() => setOpen(o => !o)}>
+        <div className="roadmap-meta">
+          <span className="roadmap-tag">{journey.target_days} zile</span>
+          <span className="roadmap-date">{new Date(journey.created_at).toLocaleDateString('ro-RO')}</span>
+        </div>
+        <h2 className="roadmap-title">{journey.journey_title || journey.original_prompt}</h2>
+        <p className="roadmap-overview">{journey.overview}</p>
+        <button className="expand-btn">{open ? '▲ Restrânge' : '▼ Vezi planul zilnic'}</button>
+      </div>
+
+      {open && (
+        <div className="daily-plans">
+          {[...(journey.daily_plans || [])].sort((a, b) => a.day_number - b.day_number).map(plan => (
+            <div key={plan.id} className="day-card">
+              <div className="day-header">
+                <span className="day-number">Ziua {plan.day_number}</span>
+                <span className="diff-badge" style={{ background: diffColor[plan.difficulty] + '22', color: diffColor[plan.difficulty], border: `1px solid ${diffColor[plan.difficulty]}` }}>
+                  {plan.difficulty}
+                </span>
+              </div>
+              <h3 className="day-title">{plan.title}</h3>
+              <ul className="concepts-list">
+                {plan.concepts_to_cover?.map((c, i) => (
+                  <li key={i}><span className="bullet">→</span>{c}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// AI CHAT PANEL
+// ════════════════════════════════════════════════════════════════════════════
+function ChatPanel({ onClose }) {
+  const [messages, setMessages] = useState([
+    { role: 'assistant', text: 'Salut! Sunt Larry, asistentul tău AI. Cu ce te pot ajuta?' }
+  ]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const bottomRef = useRef(null);
+
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+
+  const send = async e => {
+    e.preventDefault();
+    if (!input.trim()) return;
+    const userMsg = { role: 'user', text: input };
+    setMessages(m => [...m, userMsg]);
+    setInput('');
+    setLoading(true);
+    try {
+      // Use the chat-messages endpoint or fall back to a simple echo
+      const res = await axios.post('http://127.0.0.1:8000/api/v1/chat-messages/', {
+        user_id: 1,
+        role: 'user',
+        content: input
+      }, { headers: { Authorization: `Bearer ${localStorage.getItem('larry_token')}` } });
+      setMessages(m => [...m, { role: 'assistant', text: res.data?.content || 'Am primit mesajul!' }]);
+    } catch {
+      setMessages(m => [...m, { role: 'assistant', text: 'Scuze, nu pot răspunde momentan. Verifică că backend-ul rulează.' }]);
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="chat-panel">
+      <div className="chat-header">
+        <span>⚡ Larry AI</span>
+        <button onClick={onClose} className="chat-close">✕</button>
+      </div>
+      <div className="chat-messages">
+        {messages.map((m, i) => (
+          <div key={i} className={`chat-bubble ${m.role}`}>
+            {m.text}
+=======
     <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col font-sans">
       {/* Header */}
       <header className="h-16 border-b border-slate-800 bg-slate-950/50 backdrop-blur-md flex items-center justify-between px-8 sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
             <Layout size={18} className="text-white" />
+>>>>>>> f8b31b07b79c48091cc2a86744b0ab68ab0afcb4
           </div>
           <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
             LARRY
