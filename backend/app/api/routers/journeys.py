@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from pydantic import BaseModel
-from typing import List
+from sqlalchemy.orm import Session, joinedload
+from pydantic import BaseModel, ConfigDict
+from typing import List, Optional
+from datetime import datetime
 
 from app.db.database import get_db
 from app.api.deps import get_current_user
@@ -11,14 +12,73 @@ from app.agents.master_planner import generate_roadmap
 
 router = APIRouter()
 
+# ── Response schemas ──────────────────────────────────────────────────────────
+
+class DailyPlanResponse(BaseModel):
+    id: int
+    journey_id: int
+    day_number: int
+    title: str
+    concepts_to_cover: List[str]
+    difficulty: str
+    model_config = ConfigDict(from_attributes=True)
+
+class JourneyResponse(BaseModel):
+    id: int
+    user_id: int
+    original_prompt: str
+    target_days: int
+    journey_title: Optional[str]
+    overview: Optional[str]
+    created_at: datetime
+    daily_plans: List[DailyPlanResponse] = []
+    model_config = ConfigDict(from_attributes=True)
+
+# ── Request schema ─────────────────────────────────────────────────────────────
+
 class JourneyGenerateRequest(BaseModel):
-    """
-    Schema for the journey generation request.
-    """
     prompt: str
     target_days: int
 
-@router.post("/generate", status_code=status.HTTP_201_CREATED)
+# ── Endpoints ──────────────────────────────────────────────────────────────────
+
+@router.get("/", response_model=List[JourneyResponse])
+def list_journeys(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Return all journeys (with daily plans) for the current user.
+    """
+    journeys = (
+        db.query(Journey)
+        .options(joinedload(Journey.daily_plans))
+        .filter(Journey.user_id == current_user.id)
+        .order_by(Journey.created_at.desc())
+        .all()
+    )
+    return journeys
+
+@router.get("/{journey_id}", response_model=JourneyResponse)
+def get_journey(
+    journey_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Return a single journey with its daily plans.
+    """
+    journey = (
+        db.query(Journey)
+        .options(joinedload(Journey.daily_plans))
+        .filter(Journey.id == journey_id, Journey.user_id == current_user.id)
+        .first()
+    )
+    if not journey:
+        raise HTTPException(status_code=404, detail="Journey not found")
+    return journey
+
+@router.post("/generate", status_code=status.HTTP_201_CREATED, response_model=JourneyResponse)
 async def generate_new_journey(
     request: JourneyGenerateRequest,
     db: Session = Depends(get_db),
@@ -34,10 +94,8 @@ async def generate_new_journey(
         )
 
     try:
-        # 1. Call the AI Agent to generate the structured roadmap
         roadmap = await generate_roadmap(request.prompt, request.target_days)
         
-        # 2. Map the roadmap to SQLAlchemy models
         db_journey = Journey(
             user_id=current_user.id,
             original_prompt=request.prompt,
@@ -46,11 +104,8 @@ async def generate_new_journey(
             overview=roadmap.overview
         )
         db.add(db_journey)
-        
-        # We flush to obtain the journey ID for the foreign keys in DailyPlan
         db.flush()
         
-        # 3. Create DailyPlan objects for each day in the roadmap
         for plan_item in roadmap.daily_plans:
             db_plan = DailyPlan(
                 journey_id=db_journey.id,
@@ -61,17 +116,22 @@ async def generate_new_journey(
             )
             db.add(db_plan)
         
-        # 4. Commit everything to the database
         db.commit()
+
+        # Re-query with eager load so daily_plans are included in response
         db.refresh(db_journey)
-        
-        return db_journey
+        journey = (
+            db.query(Journey)
+            .options(joinedload(Journey.daily_plans))
+            .filter(Journey.id == db_journey.id)
+            .first()
+        )
+        return journey
 
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
         db.rollback()
-        # Log the error here in a production environment
         print(f"Error during journey generation: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
