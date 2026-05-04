@@ -1,7 +1,7 @@
 from typing import List, Optional
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from app.models.daily_plan import DailyPlan
+from app.models.journey import DailyPlan
 from app.schemas.daily_plan import DailyPlanCreate, DailyPlanUpdate
 
 def get_daily_plan(db: Session, daily_plan_id: int) -> Optional[DailyPlan]:

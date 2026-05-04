@@ -1,71 +1,79 @@
-from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
+from typing import List
 
 from app.db.database import get_db
-from app.models.user import User
-from app.schemas.journey import JourneyCreate, JourneyUpdate, JourneyResponse
-from app.crud.crud_journey import get_journey, get_journeys_by_user, create_journey, update_journey, delete_journey
 from app.api.deps import get_current_user
+from app.models.user import User
+from app.models.journey import Journey, DailyPlan
+from app.agents.master_planner import generate_roadmap
 
 router = APIRouter()
 
-@router.post("/", response_model=JourneyResponse, status_code=status.HTTP_201_CREATED)
-def create_new_journey(
-    *,
-    db: Session = Depends(get_db),
-    journey_in: JourneyCreate,
-    current_user: User = Depends(get_current_user)
-):
-    if journey_in.user_id != current_user.id:
-         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
-    return create_journey(db, journey=journey_in)
+class JourneyGenerateRequest(BaseModel):
+    """
+    Schema for the journey generation request.
+    """
+    prompt: str
+    target_days: int
 
-@router.get("/", response_model=List[JourneyResponse])
-def read_user_journeys(
+@router.post("/generate", status_code=status.HTTP_201_CREATED)
+async def generate_new_journey(
+    request: JourneyGenerateRequest,
     db: Session = Depends(get_db),
-    skip: int = 0,
-    limit: int = 100,
     current_user: User = Depends(get_current_user)
 ):
-    return get_journeys_by_user(db, user_id=current_user.id, skip=skip, limit=limit)
+    """
+    Endpoint to generate a new learning journey using the Master Planner AI Agent.
+    """
+    if request.target_days <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="Target days must be a positive integer."
+        )
 
-@router.get("/{journey_id}", response_model=JourneyResponse)
-def read_journey(
-    journey_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    journey = get_journey(db, journey_id=journey_id)
-    if not journey:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Journey not found")
-    if journey.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
-    return journey
+    try:
+        # 1. Call the AI Agent to generate the structured roadmap
+        roadmap = await generate_roadmap(request.prompt, request.target_days)
+        
+        # 2. Map the roadmap to SQLAlchemy models
+        db_journey = Journey(
+            user_id=current_user.id,
+            original_prompt=request.prompt,
+            target_days=request.target_days,
+            journey_title=roadmap.journey_title,
+            overview=roadmap.overview
+        )
+        db.add(db_journey)
+        
+        # We flush to obtain the journey ID for the foreign keys in DailyPlan
+        db.flush()
+        
+        # 3. Create DailyPlan objects for each day in the roadmap
+        for plan_item in roadmap.daily_plans:
+            db_plan = DailyPlan(
+                journey_id=db_journey.id,
+                day_number=plan_item.day_number,
+                title=plan_item.title,
+                concepts_to_cover=plan_item.concepts_to_cover,
+                difficulty=plan_item.difficulty
+            )
+            db.add(db_plan)
+        
+        # 4. Commit everything to the database
+        db.commit()
+        db.refresh(db_journey)
+        
+        return db_journey
 
-@router.put("/{journey_id}", response_model=JourneyResponse)
-def update_existing_journey(
-    journey_id: int,
-    journey_in: JourneyUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    journey = get_journey(db, journey_id=journey_id)
-    if not journey:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Journey not found")
-    if journey.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
-    return update_journey(db, db_journey=journey, journey_in=journey_in)
-
-@router.delete("/{journey_id}", response_model=JourneyResponse)
-def delete_existing_journey(
-    journey_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    journey = get_journey(db, journey_id=journey_id)
-    if not journey:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Journey not found")
-    if journey.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
-    return delete_journey(db, db_journey=journey)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        db.rollback()
+        # Log the error here in a production environment
+        print(f"Error during journey generation: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred during journey generation: {str(e)}"
+        )
