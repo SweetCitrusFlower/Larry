@@ -154,7 +154,7 @@ function RoadmapCard({ journey }) {
               </div>
               <h3 className="day-title">{plan.title}</h3>
               <ul className="concepts-list">
-                {plan.concepts_to_cover.map((c, i) => (
+                {plan.concepts_to_cover?.map((c, i) => (
                   <li key={i}><span className="bullet">→</span>{c}</li>
                 ))}
               </ul>
