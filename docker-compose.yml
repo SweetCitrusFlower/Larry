@@ -37,22 +37,28 @@ services:
       - "11434:11434"
     volumes:
       - ollamadata:/root/.ollama
-    # Note: For GPU support, you would need to add deploy configurations here
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
     restart: unless-stopped
 
-  # judge0:
-  #   # Placeholder for Judge0 code execution environment.
-  #   # Judge0 setup typically requires multiple services (server, worker, db, redis)
-  #   # To be fully configured later.
-  #   image: judge0/judge0:1.13.0
-  #   ...
+  backend:
+    build: ./backend
+    container_name: aicoach-backend
+    environment:
+      DATABASE_URL: postgresql://user:password@db:5432/aicoach
+      REDIS_URL: redis://redis:6379/0
+      ALLOWED_ORIGINS: "http://localhost,http://localhost:5173"
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: aicoach-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
 
 volumes:
   pgdata:
