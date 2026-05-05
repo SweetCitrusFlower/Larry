@@ -37,6 +37,55 @@ sequenceDiagram
     F-->>U: Randează interfața în dreapta
 ```
 
+Container Architecture
+```mermaid
+graph TD
+    User((Utilizator / Browser))
+    
+    subgraph Docker Compose
+        Nginx[Nginx Container\nPort 80]
+        React[React Frontend\nStatic Files]
+        FastAPI[FastAPI Backend\nPort 8000]
+        Ollama[Ollama Container\nPort 11434]
+        Postgres[(PostgreSQL DB\nPort 5432)]
+        Redis[(Redis Cache)]
+    end
+
+    User -->|HTTP| Nginx
+    Nginx -->|Servește Interfața| React
+    Nginx -->|Proxy /api/v1/| FastAPI
+    
+    FastAPI -->|LangChain| Ollama
+    FastAPI -->|SQLAlchemy| Postgres
+    FastAPI -->|Sesiuni/Ratelimit| Redis
+    
+    classDef ai fill:#f9d0c4,stroke:#333,stroke-width:2px;
+    class Ollama ai;
+```
+
+Entity-Relationship Diagram 
+
+```mermaid
+erDiagram
+    USER ||--o{ JOURNEY_ROADMAP : "creează"
+    JOURNEY_ROADMAP ||--|{ DAILY_PLAN : "conține"
+
+    JOURNEY_ROADMAP {
+        uuid id PK
+        string journey_title "Ex: Python Mastery"
+        string overview "Descrierea generată de AI"
+        string difficulty "Nivelul setat"
+        datetime created_at
+    }
+
+    DAILY_PLAN {
+        int id PK
+        int day_number "Ziua 1, Ziua 2..."
+        string title "Focusul zilei"
+        json concepts_to_cover "Lista de task-uri (array)"
+        uuid journey_id FK "Legătura cu roadmap-ul"
+    }
+```
 ### 1. Hybrid LLM Architecture
 Larry uses a cost-effective and highly capable hybrid model strategy:
 - **Commercial APIs (e.g., Gemini Pro):** Utilized by the Master Planner Agent for complex reasoning, long-term journey generation, and high-level curriculum design.
