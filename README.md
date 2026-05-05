@@ -11,35 +11,30 @@ This document serves as the official baseline (t0) architecture and project docu
 ## 🏗 Architecture Overview
 
 The system is designed with a modern decoupled architecture, separating the client interface from the backend API, the AI orchestration layer, and the isolated code evaluation environment.
+1) Sequence Diagram
 
 ```mermaid
-graph TD
-    UI[Frontend: React/Vite + Monaco] -->|REST API + JWT| API[Backend: FastAPI]
-    
-    subgraph Backend Infrastructure
-        API --> DB[(PostgreSQL)]
-        API --> redis[(Redis)]
-        API --> agents[LangChain Agent Layer]
-    end
-    
-    subgraph Multi-Agent System
-        agents --> Planner[Master Planner Agent]
-        agents --> Creator[Content Creator Agent]
-        agents --> Tutor[Socratic Tutor Agent]
-    end
-    
-    subgraph Knowledge & Intelligence
-        agents <--> RAG[RAG Pipeline]
-        RAG <--> VectorDB[(ChromaDB)]
-        agents <--> HybridLLM{Hybrid LLM Layer}
-        HybridLLM --> Commercial(Gemini/OpenAI)
-        HybridLLM --> Local(Ollama Server)
-    end
-    
-    subgraph Code Execution
-        UI -->|Code Submission| Judge[Judge0 Isolated Env]
-        API -->|Scoring Validation| Judge
-    end
+sequenceDiagram
+    autonumber
+    actor U as Utilizator
+    participant F as Frontend (React)
+    participant N as Nginx (Reverse Proxy)
+    participant B as Backend (FastAPI)
+    participant LLM as Ollama (Qwen 2.5)
+    participant DB as PostgreSQL
+
+    U->>F: Scrie "Vreau să învăț Python"
+    F->>N: POST /api/v1/generate
+    N->>B: Forward către containerul Python
+    B->>B: Formatează SYSTEM_PROMPT
+    B->>LLM: Cerere cu format="json"
+    Note over LLM: Agentul AI gândește...
+    LLM-->>B: Returnează JSON structurat
+    B->>DB: Salvează noul JourneyRoadmap
+    DB-->>B: Confirmare salvare
+    B-->>N: 200 OK + Datele Roadmap-ului
+    N-->>F: Forward răspuns
+    F-->>U: Randează interfața în dreapta
 ```
 
 ### 1. Hybrid LLM Architecture
