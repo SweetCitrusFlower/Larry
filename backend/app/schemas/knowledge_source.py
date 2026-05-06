@@ -5,6 +5,7 @@ class KnowledgeSourceBase(BaseModel):
     title: str
     processing_status: Optional[str] = "pending"
     reference_id: Optional[str] = None
+    user_id: Optional[int] = None
 
 class KnowledgeSourceCreate(KnowledgeSourceBase):
     pass

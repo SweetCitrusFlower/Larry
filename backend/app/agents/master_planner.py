@@ -1,7 +1,7 @@
 import os
 from typing import Optional
 # 1. Am schimbat importul de la Google la Ollama
-from langchain_community.chat_models import ChatOllama 
+from langchain_ollama import ChatOllama 
 from langchain_core.prompts import ChatPromptTemplate
 from app.schemas.planner_schemas import JourneyRoadmap
 
@@ -29,14 +29,14 @@ async def generate_roadmap(user_goal: str, target_days: int) -> JourneyRoadmap:
         raise ValueError("Target days must be a positive integer.")
 
     try:
-        # 2. Am înlocuit inițializarea Gemini cu ChatOllama
-        # Folosim modelul tău qwen2.5-coder:3b și ne conectăm la portul local
         from langchain_core.output_parsers import JsonOutputParser
         
+        base_url = os.getenv("OLLAMA_BASE_URL", "http://ollama:11434")
+        
         llm = ChatOllama(
-            model="qwen2.5-coder:3b",
-            base_url="http://localhost:11434",
-            temperature=0,  # Lower temperature for better JSON
+            model=os.getenv("OLLAMA_MODEL", "qwen2.5-coder:3b"),
+            base_url=base_url,
+            temperature=0,
             format="json",
         )
 

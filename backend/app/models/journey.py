@@ -6,6 +6,8 @@ from app.db.database import Base
 
 if TYPE_CHECKING:
     from app.models.user import User
+    from app.models.task import Task
+    from app.models.daily_plan import DailyPlan
 
 class Journey(Base):
     __tablename__ = "journeys"
@@ -21,16 +23,3 @@ class Journey(Base):
     # Relationships
     user: Mapped["User"] = relationship(back_populates="journeys")
     daily_plans: Mapped[List["DailyPlan"]] = relationship(back_populates="journey", cascade="all, delete-orphan")
-
-class DailyPlan(Base):
-    __tablename__ = "daily_plans"
-
-    id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    journey_id: Mapped[int] = mapped_column(ForeignKey("journeys.id"))
-    day_number: Mapped[int]
-    title: Mapped[str] = mapped_column(String)
-    concepts_to_cover: Mapped[list] = mapped_column(JSON)
-    difficulty: Mapped[str] = mapped_column(String)
-
-    # Relationships
-    journey: Mapped["Journey"] = relationship(back_populates="daily_plans")

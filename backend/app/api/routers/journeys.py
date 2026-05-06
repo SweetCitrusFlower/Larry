@@ -7,7 +7,8 @@ from datetime import datetime
 from app.db.database import get_db
 from app.api.deps import get_current_user
 from app.models.user import User
-from app.models.journey import Journey, DailyPlan
+from app.models.journey import Journey
+from app.models.daily_plan import DailyPlan
 from app.agents.master_planner import generate_roadmap
 
 router = APIRouter()
@@ -42,6 +43,8 @@ class JourneyGenerateRequest(BaseModel):
 
 # ── Endpoints ──────────────────────────────────────────────────────────────────
 
+from sqlalchemy import select
+
 @router.get("/", response_model=List[JourneyResponse])
 def list_journeys(
     db: Session = Depends(get_db),
@@ -50,13 +53,13 @@ def list_journeys(
     """
     Return all journeys (with daily plans) for the current user.
     """
-    journeys = (
-        db.query(Journey)
+    stmt = (
+        select(Journey)
         .options(joinedload(Journey.daily_plans))
-        .filter(Journey.user_id == current_user.id)
+        .where(Journey.user_id == current_user.id)
         .order_by(Journey.created_at.desc())
-        .all()
     )
+    journeys = db.execute(stmt).scalars().unique().all()
     return journeys
 
 @router.get("/{journey_id}", response_model=JourneyResponse)
@@ -68,12 +71,13 @@ def get_journey(
     """
     Return a single journey with its daily plans.
     """
-    journey = (
-        db.query(Journey)
+    stmt = (
+        select(Journey)
         .options(joinedload(Journey.daily_plans))
-        .filter(Journey.id == journey_id, Journey.user_id == current_user.id)
-        .first()
+        .where(Journey.id == journey_id, Journey.user_id == current_user.id)
     )
+    journey = db.execute(stmt).scalars().unique().first()
+    
     if not journey:
         raise HTTPException(status_code=404, detail="Journey not found")
     return journey
