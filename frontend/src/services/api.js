@@ -81,4 +81,10 @@ export const journeyAPI = {
     api.post('/journeys/generate', { prompt, target_days: targetDays }),
 };
 
+export const journeysAPI = {
+  getJourneys: () => api.get('/journeys/'),
+  getJourney: (id) => api.get(`/journeys/${id}`),
+  generateJourney: (data) => api.post('/journeys/generate', data),
+};
+
 export default api;

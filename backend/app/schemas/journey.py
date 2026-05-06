@@ -1,25 +1,28 @@
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
-class JourneyBase(BaseModel):
+class DailyPlanResponse(BaseModel):
+    id: int
+    journey_id: int
+    day_number: int
     title: str
-    initial_user_prompt: str # The "prompt" from frontend
-    objectives: str
-    total_days: int # The "timeframe" from frontend
-    status: str = "active"
+    concepts_to_cover: List[str]
+    difficulty: str
+    model_config = ConfigDict(from_attributes=True)
 
-class JourneyCreate(JourneyBase):
-    user_id: int
+class JourneyGenerateRequest(BaseModel):
+    prompt: str
+    target_days: int
 
-class JourneyUpdate(BaseModel):
-    title: Optional[str] = None
-    objectives: Optional[str] = None
-    status: Optional[str] = None
-
-class JourneyResponse(JourneyBase):
+class JourneyResponse(BaseModel):
     id: int
     user_id: int
-    start_date: datetime
-
+    original_prompt: str
+    target_days: int
+    journey_title: Optional[str] = None
+    overview: Optional[str] = None
+    created_at: datetime
+    daily_plans: List[DailyPlanResponse] = []
+    
     model_config = ConfigDict(from_attributes=True)

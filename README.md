@@ -11,6 +11,7 @@ This document serves as the official baseline (t0) architecture and project docu
 ## 🏗 Architecture Overview
 
 The system is designed with a modern decoupled architecture, separating the client interface from the backend API, the AI orchestration layer, and the isolated code evaluation environment.
+1) Sequence Diagram
 
 ```mermaid
     graph TD
@@ -70,8 +71,78 @@ graph TD
         UI -->|Code Submission| Judge[Judge0 Isolated Env]
         API -->|Scoring Validation| Judge
     end
+sequenceDiagram
+    autonumber
+    actor U as Utilizator
+    participant F as Frontend (React)
+    participant N as Nginx (Reverse Proxy)
+    participant B as Backend (FastAPI)
+    participant LLM as Ollama (Qwen 2.5)
+    participant DB as PostgreSQL
+
+    U->>F: Scrie "Vreau să învăț Python"
+    F->>N: POST /api/v1/generate
+    N->>B: Forward către containerul Python
+    B->>B: Formatează SYSTEM_PROMPT
+    B->>LLM: Cerere cu format="json"
+    Note over LLM: Agentul AI gândește...
+    LLM-->>B: Returnează JSON structurat
+    B->>DB: Salvează noul JourneyRoadmap
+    DB-->>B: Confirmare salvare
+    B-->>N: 200 OK + Datele Roadmap-ului
+    N-->>F: Forward răspuns
+    F-->>U: Randează interfața în dreapta
 ```
 
+Container Architecture
+```mermaid
+graph TD
+    User((Utilizator / Browser))
+    
+    subgraph Docker Compose
+        Nginx[Nginx Container\nPort 80]
+        React[React Frontend\nStatic Files]
+        FastAPI[FastAPI Backend\nPort 8000]
+        Ollama[Ollama Container\nPort 11434]
+        Postgres[(PostgreSQL DB\nPort 5432)]
+        Redis[(Redis Cache)]
+    end
+
+    User -->|HTTP| Nginx
+    Nginx -->|Servește Interfața| React
+    Nginx -->|Proxy /api/v1/| FastAPI
+    
+    FastAPI -->|LangChain| Ollama
+    FastAPI -->|SQLAlchemy| Postgres
+    FastAPI -->|Sesiuni/Ratelimit| Redis
+    
+    classDef ai fill:#f9d0c4,stroke:#333,stroke-width:2px;
+    class Ollama ai;
+```
+
+Entity-Relationship Diagram 
+
+```mermaid
+erDiagram
+    USER ||--o{ JOURNEY_ROADMAP : "creează"
+    JOURNEY_ROADMAP ||--|{ DAILY_PLAN : "conține"
+
+    JOURNEY_ROADMAP {
+        uuid id PK
+        string journey_title "Ex: Python Mastery"
+        string overview "Descrierea generată de AI"
+        string difficulty "Nivelul setat"
+        datetime created_at
+    }
+
+    DAILY_PLAN {
+        int id PK
+        int day_number "Ziua 1, Ziua 2..."
+        string title "Focusul zilei"
+        json concepts_to_cover "Lista de task-uri (array)"
+        uuid journey_id FK "Legătura cu roadmap-ul"
+    }
+```
 ### 1. Hybrid LLM Architecture
 Larry uses a cost-effective and highly capable hybrid model strategy:
 - **Commercial APIs (e.g., Gemini Pro):** Utilized by the Master Planner Agent for complex reasoning, long-term journey generation, and high-level curriculum design.
