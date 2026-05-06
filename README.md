@@ -13,6 +13,36 @@ This document serves as the official baseline (t0) architecture and project docu
 The system is designed with a modern decoupled architecture, separating the client interface from the backend API, the AI orchestration layer, and the isolated code evaluation environment.
 
 ```mermaid
+    graph TD
+        UI[Frontend: React/Vite + Monaco] -->|REST API + JWT| API[Backend: FastAPI]
+        
+        subgraph Backend Infrastructure
+            API --> DB[(PostgreSQL)]
+            API --> redis[(Redis)]
+            API --> agents[LangChain Agent Layer]
+        end
+        
+        subgraph Multi-Agent System
+            agents --> Planner[Master Planner Agent]
+            agents --> Creator[Content Creator Agent]
+            agents --> Tutor[Socratic Tutor Agent]
+        end
+        
+        subgraph Knowledge & Intelligence
+            agents <--> RAG[RAG Pipeline]
+            RAG <--> VectorDB[(ChromaDB)]
+            agents <--> HybridLLM{Hybrid LLM Layer}
+            HybridLLM --> Commercial(Gemini/OpenAI)
+            HybridLLM --> Local(Ollama Server)
+        end
+        
+        subgraph Code Execution
+            UI -->|Code Submission| Judge[Judge0 Isolated Env]
+            API -->|Scoring Validation| Judge
+        end
+```
+
+```mermaid
 graph TD
     UI[Frontend: React/Vite + Monaco] -->|REST API + JWT| API[Backend: FastAPI]
     
