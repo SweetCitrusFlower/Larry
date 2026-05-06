@@ -42,6 +42,8 @@ services:
   backend:
     build: ./backend
     container_name: aicoach-backend
+    ports:
+      - "8080:8000"
     environment:
       DATABASE_URL: postgresql://user:password@db:5432/aicoach
       REDIS_URL: redis://redis:6379/0
