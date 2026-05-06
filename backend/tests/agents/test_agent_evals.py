@@ -167,9 +167,9 @@ def judge_response(eval_case: EvalCase, agent_response: str) -> float:
             "See TODO in judge_response() to configure."
         )
     else:
-        # ── MOCK MODE (default) ──────────────────────────────────────────────
-        # Returns a perfect score so the CI pipeline passes without a live LLM.
-        return 1.0
+        # ── STRICT EVALUATION ENFORCEMENT ──────────────────────────────────────────────
+        pytest.fail("Evaluation framework bypass detected! LARRY_EVAL_MODE must be set to 'live' to run agent evaluations. Mocking is disabled to ensure Golden Dataset integrity.")
+        return 0.0
 
 
 def validate_planner_structure(agent_response: str, expected_days: int) -> dict:

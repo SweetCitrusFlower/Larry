@@ -4,7 +4,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.database import Base
 
 if TYPE_CHECKING:
-    from app.models.journey import DailyPlan
+    from app.models.daily_plan import DailyPlan
     from app.models.user_submission import UserSubmission
 
 class Task(Base):

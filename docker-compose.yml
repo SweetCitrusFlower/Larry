@@ -42,10 +42,14 @@ services:
   backend:
     build: ./backend
     container_name: aicoach-backend
+    ports:
+      - "8080:8000"
     environment:
       DATABASE_URL: postgresql://user:password@db:5432/aicoach
       REDIS_URL: redis://redis:6379/0
       ALLOWED_ORIGINS: "http://localhost,http://localhost:5173"
+      JUDGE0_API_URL: "http://host.docker.internal:2358"
+      OLLAMA_BASE_URL: "http://ollama:11434"
     depends_on:
       - db
       - redis

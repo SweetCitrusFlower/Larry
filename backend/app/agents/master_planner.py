@@ -33,9 +33,10 @@ async def generate_roadmap(user_goal: str, target_days: int) -> JourneyRoadmap:
         # Folosim modelul tău qwen2.5-coder:3b și ne conectăm la portul local
         from langchain_core.output_parsers import JsonOutputParser
         
+        ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
         llm = ChatOllama(
             model="qwen2.5-coder:3b",
-            base_url="http://localhost:11434",
+            base_url=ollama_base_url,
             temperature=0,  # Lower temperature for better JSON
             format="json",
         )
