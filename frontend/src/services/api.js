@@ -48,4 +48,10 @@ export const chatAPI = {
   sendMessage: (message) => api.post('/chat-messages/', message),
 };
 
+export const journeysAPI = {
+  getJourneys: () => api.get('/journeys/'),
+  getJourney: (id) => api.get(`/journeys/${id}`),
+  generateJourney: (data) => api.post('/journeys/generate', data),
+};
+
 export default api;

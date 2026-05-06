@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { chatAPI } from '../services/api';
+import { chatAPI, journeysAPI } from '../services/api';
 import { Send, Sparkles, Loader2, User, Bot } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -27,24 +27,24 @@ const ChatPane = ({ onRoadmapGenerated }) => {
     };
     
     setMessages(prev => [...prev, userMessage]);
+    const currentInput = input;
     setInput('');
     setLoading(true);
 
     try {
-      // Note: In a real app, we'd send the data to a specific endpoint that generates a roadmap
-      // For now, we use the chat-messages endpoint as a placeholder or specific roadmap logic
-      const response = await chatAPI.sendMessage({
-        content: input,
-        days: days
+      // Use the dedicated journeys generation endpoint
+      const response = await journeysAPI.generateJourney({
+        prompt: currentInput,
+        target_days: parseInt(days, 10)
       });
 
       setMessages(prev => [...prev, { 
         role: 'assistant', 
-        content: response.data.response || "I've generated your roadmap! Check it out below." 
+        content: "I've generated your roadmap! Check it out below." 
       }]);
 
-      if (response.data.roadmap) {
-        onRoadmapGenerated(response.data.roadmap);
+      if (response.data) {
+        onRoadmapGenerated(response.data);
       }
     } catch (err) {
       setMessages(prev => [...prev, { 
