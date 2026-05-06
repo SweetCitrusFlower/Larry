@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { chatAPI } from '../services/api';
+import { chatAPI, journeyAPI } from '../services/api';
 import { Send, Sparkles, Loader2, User, Bot } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 const ChatPane = ({ onRoadmapGenerated }) => {
   const [messages, setMessages] = useState([
@@ -18,39 +18,39 @@ const ChatPane = ({ onRoadmapGenerated }) => {
     }
   }, [messages]);
 
+  const pushMessage = (role, content) =>
+    setMessages((prev) => [...prev, { role, content }]);
+
   const handleSend = async () => {
     if (!input.trim() || loading) return;
 
-    const userMessage = { 
-      role: 'user', 
-      content: `I want to learn ${input} in ${days} days.` 
-    };
-    
-    setMessages(prev => [...prev, userMessage]);
+    const userContent = `I want to learn ${input} in ${days} days.`;
+    pushMessage('user', userContent);
+    const savedInput = input;
+    const savedDays = parseInt(days, 10);
     setInput('');
     setLoading(true);
 
     try {
-      // Note: In a real app, we'd send the data to a specific endpoint that generates a roadmap
-      // For now, we use the chat-messages endpoint as a placeholder or specific roadmap logic
-      const response = await chatAPI.sendMessage({
-        content: input,
-        days: days
-      });
+      // 1. Persist the user message to the backend
+      await chatAPI.sendMessage(userContent, 'user');
 
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: response.data.response || "I've generated your roadmap! Check it out below." 
-      }]);
+      // 2. Call the journey generation endpoint
+      const response = await journeyAPI.generate(savedInput, savedDays);
+      const journey = response.data;
 
-      if (response.data.roadmap) {
-        onRoadmapGenerated(response.data.roadmap);
+      pushMessage(
+        'assistant',
+        `Great! I've generated your ${journey.journey_title} roadmap. Check it out on the right.`
+      );
+
+      if (onRoadmapGenerated) {
+        onRoadmapGenerated(journey);
       }
     } catch (err) {
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: "Sorry, I encountered an error. Please try again later." 
-      }]);
+      const detail =
+        err.response?.data?.detail || 'Sorry, I encountered an error. Please try again.';
+      pushMessage('assistant', detail);
     } finally {
       setLoading(false);
     }
@@ -68,7 +68,7 @@ const ChatPane = ({ onRoadmapGenerated }) => {
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">
         {messages.map((msg, idx) => (
-          <motion.div 
+          <motion.div
             key={idx}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -79,8 +79,8 @@ const ChatPane = ({ onRoadmapGenerated }) => {
                 {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
               </div>
               <div className={`p-3 rounded-2xl text-sm leading-relaxed ${
-                msg.role === 'user' 
-                ? 'bg-blue-600 text-white rounded-tr-none' 
+                msg.role === 'user'
+                ? 'bg-blue-600 text-white rounded-tr-none'
                 : 'bg-slate-800 text-slate-200 rounded-tl-none border border-slate-700'
               }`}>
                 {msg.content}
@@ -105,9 +105,9 @@ const ChatPane = ({ onRoadmapGenerated }) => {
       <div className="p-4 border-t border-slate-800 bg-slate-900/50">
         <div className="flex items-center gap-2 mb-3">
           <span className="text-xs text-slate-500 font-medium">Duration:</span>
-          <input 
-            type="number" 
-            min="1" 
+          <input
+            type="number"
+            min="1"
             max="30"
             className="w-16 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-blue-400 focus:outline-none"
             value={days}
@@ -116,7 +116,7 @@ const ChatPane = ({ onRoadmapGenerated }) => {
           <span className="text-xs text-slate-500">days</span>
         </div>
         <div className="relative">
-          <textarea 
+          <textarea
             rows="1"
             placeholder="I want to learn Python..."
             className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-4 pr-12 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"
@@ -124,7 +124,7 @@ const ChatPane = ({ onRoadmapGenerated }) => {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
           />
-          <button 
+          <button
             onClick={handleSend}
             disabled={!input.trim() || loading}
             className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600 rounded-lg transition-colors text-white"

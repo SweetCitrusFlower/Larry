@@ -12,6 +12,7 @@ export default function App() {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    setCurrentRoadmap(null);
     setIsAuthenticated(false);
     setIsAuthModalOpen(true);
   };
