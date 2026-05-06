@@ -12,6 +12,8 @@ async def submit_code(source_code: str, language_id: int, expected_output: Optio
     payload = {
         "source_code": source_code,
         "language_id": language_id,
+        "enable_per_process_and_thread_time_limit": True,
+        "enable_per_process_and_thread_memory_limit": True,
     }
     if expected_output:
         payload["expected_output"] = expected_output

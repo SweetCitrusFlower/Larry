@@ -46,6 +46,7 @@ services:
       DATABASE_URL: postgresql://user:password@db:5432/aicoach
       REDIS_URL: redis://redis:6379/0
       ALLOWED_ORIGINS: "http://localhost,http://localhost:5173"
+      JUDGE0_API_URL: "http://host.docker.internal:2358"
     depends_on:
       - db
       - redis
