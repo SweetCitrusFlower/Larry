@@ -1,21 +1,63 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Circle } from 'lucide-react';
+import { Calendar, Circle, Loader2, Play } from 'lucide-react';
+import { dailyPlanAPI, journeyAPI } from '../services/api';
+import { useParams, useNavigate } from 'react-router-dom';
 
-/**
- * Renders a Journey returned by the backend.
- *
- * Backend JourneyResponse shape:
- *   { id, user_id, journey_title, overview, target_days, original_prompt, created_at,
- *     daily_plans: [{ id, journey_id, day_number, title, concepts_to_cover, difficulty }] }
- */
-const RoadmapDisplay = ({ roadmap }) => {
-  if (!roadmap) return null;
+const RoadmapDisplay = () => {
+  const [roadmap, setRoadmap] = useState(null);
+  const [plans, setPlans] = useState([]);
+  const [generatingIds, setGeneratingIds] = useState(new Set());
+  const { journeyId } = useParams();
+  const navigate = useNavigate();
 
-  // Normalise: backend returns `daily_plans`, sorted by day_number
-  const plans = [...(roadmap.daily_plans ?? [])].sort(
-    (a, b) => a.day_number - b.day_number
-  );
+  useEffect(() => {
+    const fetchJourney = async () => {
+      try {
+        const res = await journeyAPI.getJourney(journeyId);
+        setRoadmap(res.data);
+        
+        // Fetch full daily plans because getJourney drops content_status
+        const plansRes = await dailyPlanAPI.getJourneyDailyPlans(journeyId);
+        if (plansRes.data) {
+          setPlans([...plansRes.data].sort((a, b) => a.day_number - b.day_number));
+        }
+      } catch (e) {
+        console.error("Failed to fetch journey", e);
+      }
+    };
+    if (journeyId) {
+      fetchJourney();
+    }
+  }, [journeyId]);
+
+  const handleGenerate = async (planId) => {
+    setGeneratingIds(prev => new Set(prev).add(planId));
+    try {
+      const response = await dailyPlanAPI.generateContent(planId);
+      setPlans(prev => prev.map(p => p.id === planId ? response.data : p));
+    } catch (e) {
+      console.error("Failed to generate content", e);
+    } finally {
+      setGeneratingIds(prev => {
+        const next = new Set(prev);
+        next.delete(planId);
+        return next;
+      });
+    }
+  };
+
+  const handleStartLesson = (plan) => {
+    navigate(`/workspace/${plan.id}`);
+  };
+
+  if (!roadmap) {
+    return (
+      <div className="flex h-full items-center justify-center text-slate-500 w-full">
+        <Loader2 className="animate-spin" size={32} />
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -36,7 +78,9 @@ const RoadmapDisplay = ({ roadmap }) => {
 
       {/* Daily Plans */}
       <div className="space-y-4">
-        {plans.map((plan, idx) => (
+        {plans.map((plan, idx) => {
+          console.log("Fetched plan data:", plan);
+          return (
           <motion.div
             key={plan.id}
             initial={{ opacity: 0, x: -20 }}
@@ -88,9 +132,31 @@ const RoadmapDisplay = ({ roadmap }) => {
                   ))}
                 </div>
               )}
+              {/* Actions */}
+              <div className="mt-5 flex justify-end border-t border-slate-800/50 pt-4">
+                {(plan.content_status === 'COMPLETED' || plan.theoretical_topic_content) ? (
+                  <button 
+                    onClick={() => handleStartLesson(plan)} 
+                    className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2"
+                  >
+                    <Play size={16} /> Start Lesson
+                  </button>
+                ) : (generatingIds.has(plan.id) || plan.content_status === 'GENERATING') ? (
+                  <button disabled className="bg-slate-800 text-slate-400 border border-slate-700 px-5 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 cursor-not-allowed">
+                    <Loader2 size={16} className="animate-spin" /> Generating...
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => handleGenerate(plan.id)} 
+                    className="bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-5 py-2 rounded-lg text-sm font-semibold transition-colors"
+                  >
+                    Generate Lesson
+                  </button>
+                )}
+              </div>
             </div>
           </motion.div>
-        ))}
+        )})}
       </div>
     </motion.div>
   );

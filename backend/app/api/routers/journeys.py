@@ -98,7 +98,7 @@ async def generate_new_journey(
         )
 
     try:
-        roadmap = await generate_roadmap(request.prompt, request.target_days)
+        roadmap = await generate_roadmap(request.prompt, request.target_days, db=db)
         
         db_journey = Journey(
             user_id=current_user.id,

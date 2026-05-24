@@ -48,8 +48,12 @@ services:
       DATABASE_URL: postgresql://user:password@db:5432/aicoach
       REDIS_URL: redis://redis:6379/0
       ALLOWED_ORIGINS: "http://localhost,http://localhost:5173"
-      JUDGE0_API_URL: "http://host.docker.internal:2358"
+      JUDGE0_API_URL: "http://judge0-server:2358"
       OLLAMA_BASE_URL: "http://ollama:11434"
+      GOOGLE_APPLICATION_CREDENTIALS: "/tmp/adc.json"
+      GOOGLE_CLOUD_PROJECT: "project-43919676-77f2-42ed-8b8"
+    volumes:
+      - c:/Users/minas/AppData/Roaming/gcloud/application_default_credentials.json:/tmp/adc.json:ro
     depends_on:
       - db
       - redis
@@ -64,7 +68,49 @@ services:
       - backend
     restart: unless-stopped
 
+  judge0-server:
+    image: judge0/judge0:1.13.1
+    container_name: judge0-server
+    volumes:
+      - ./infrastructure/judge0/judge0.conf:/judge0.conf:ro
+    ports:
+      - "2358:2358"
+    privileged: true
+    restart: always
+
+  judge0-worker:
+    image: judge0/judge0:1.13.1
+    container_name: judge0-worker
+    command: ["bash", "-c", "echo 'root ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && ./scripts/workers"]
+    volumes:
+      - ./infrastructure/judge0/judge0.conf:/judge0.conf:ro
+    privileged: true
+    user: "root"
+    restart: always
+
+  judge0-db:
+    image: postgres:13.0
+    container_name: judge0-postgres
+    env_file: ./infrastructure/judge0/judge0.conf
+    volumes:
+      - judge0-postgres-data:/var/lib/postgresql/data/
+    restart: always
+
+  judge0-redis:
+    image: redis:6.0
+    container_name: judge0-redis
+    command: [
+      "bash", "-c",
+      'docker-entrypoint.sh --appendonly yes --requirepass "$$REDIS_PASSWORD"'
+    ]
+    env_file: ./infrastructure/judge0/judge0.conf
+    volumes:
+      - judge0-redis-data:/data
+    restart: always
+
 volumes:
   pgdata:
   chromadata:
   ollamadata:
+  judge0-postgres-data:
+  judge0-redis-data:

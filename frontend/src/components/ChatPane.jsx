@@ -2,15 +2,37 @@ import React, { useState, useRef, useEffect } from 'react';
 import { chatAPI, journeyAPI } from '../services/api';
 import { Send, Sparkles, Loader2, User, Bot } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useNavigate, useParams } from 'react-router-dom';
 
-const ChatPane = ({ onRoadmapGenerated }) => {
-  const [messages, setMessages] = useState([
-    { role: 'assistant', content: "Hi, I'm Larry. What would you like to learn today? Tell me the topic and how many days you have." }
-  ]);
+const ChatPane = () => {
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [days, setDays] = useState(7);
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef(null);
+  const navigate = useNavigate();
+  const { journeyId } = useParams();
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        if (journeyId) {
+          const res = await journeyAPI.getJourney(journeyId);
+          const j = res.data;
+          setMessages([
+            { role: 'assistant', content: "Hi, I'm Larry. What would you like to learn today? Tell me the topic and how many days you have." },
+            { role: 'user', content: `I want to learn ${j.original_prompt} in ${j.target_days} days.` },
+            { role: 'assistant', content: `Great! I've generated your ${j.journey_title} roadmap. Check it out on the right.` }
+          ]);
+        } else {
+          setMessages([{ role: 'assistant', content: "Hi, I'm Larry. What would you like to learn today? Tell me the topic and how many days you have." }]);
+        }
+      } catch (err) {
+        setMessages([{ role: 'assistant', content: "Hi, I'm Larry. What would you like to learn today? Tell me the topic and how many days you have." }]);
+      }
+    };
+    fetchHistory();
+  }, [journeyId]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -44,9 +66,7 @@ const ChatPane = ({ onRoadmapGenerated }) => {
         `Great! I've generated your ${journey.journey_title} roadmap. Check it out on the right.`
       );
 
-      if (onRoadmapGenerated) {
-        onRoadmapGenerated(journey);
-      }
+      navigate(`/journey/${journey.id}`);
     } catch (err) {
       const detail =
         err.response?.data?.detail || 'Sorry, I encountered an error. Please try again.';
@@ -58,7 +78,7 @@ const ChatPane = ({ onRoadmapGenerated }) => {
 
   return (
     <div className="flex flex-col h-full glass-card overflow-hidden">
-      <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
+      <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50 shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
           <h3 className="font-bold text-sm tracking-widest text-slate-400">LARRY AI</h3>
@@ -102,7 +122,7 @@ const ChatPane = ({ onRoadmapGenerated }) => {
         )}
       </div>
 
-      <div className="p-4 border-t border-slate-800 bg-slate-900/50">
+      <div className="p-4 border-t border-slate-800 bg-slate-900/50 shrink-0">
         <div className="flex items-center gap-2 mb-3">
           <span className="text-xs text-slate-500 font-medium">Duration:</span>
           <input

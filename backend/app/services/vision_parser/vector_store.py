@@ -11,7 +11,7 @@ async def store_chunks_in_chroma(chunks: List[Document], original_filename: str)
     Stores LangChain Documents into a local ChromaDB instance via HTTP,
     using Google Vertex AI Embeddings.
     """
-    chroma_host = os.getenv("CHROMA_HOST", "localhost")
+    chroma_host = os.getenv("CHROMA_HOST", "vectordb")
     chroma_port = int(os.getenv("CHROMA_PORT", "8000"))
     
     # Initialize the HTTP Client
@@ -36,4 +36,4 @@ async def store_chunks_in_chroma(chunks: List[Document], original_filename: str)
     
     # Add documents. LangChain's Chroma wrapper handles embedding computation.
     # Note: add_documents is synchronous, we run it in a threadpool to not block the FastAPI event loop.
-    await asyncio.to_thread(vectorstore.add_documents, chunks)
+    await asyncio.to_thread(vectorstore.add_documents, chunks, batch_size=100)

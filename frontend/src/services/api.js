@@ -81,4 +81,30 @@ export const journeyAPI = {
     api.post('/journeys/generate', { prompt, target_days: targetDays }),
 };
 
+// ── Daily Plan API ────────────────────────────────────────────────────────────
+export const dailyPlanAPI = {
+  getDailyPlan: (id) => api.get(`/daily-plans/${id}`),
+  generateContent: (id) => api.post(`/daily-plans/${id}/generate-content`),
+  getJourneyDailyPlans: (journeyId) => api.get(`/daily-plans/journey/${journeyId}`)
+};
+
+// ── Task API ──────────────────────────────────────────────────────────────────
+export const taskAPI = {
+  getDailyPlanTasks: (dailyPlanId) => api.get(`/tasks/daily-plan/${dailyPlanId}`)
+};
+
+// ── Submission API ────────────────────────────────────────────────────────────
+export const submissionAPI = {
+  submitCode: (taskId, code, languageId = 71) => {
+    const user_id = getUserIdFromToken();
+    return api.post('/submissions/', { 
+      task_id: taskId, 
+      submitted_code: code, 
+      language_id: languageId,
+      user_id: user_id,
+      result_status: 'pending'
+    });
+  }
+};
+
 export default api;

@@ -3,7 +3,7 @@ import httpx
 import asyncio
 from typing import Dict, Any, Optional
 
-JUDGE0_API_URL = os.getenv("JUDGE0_API_URL", "http://host.docker.internal:2358")
+JUDGE0_API_URL = os.getenv("JUDGE0_API_URL", "http://judge0-server:2358")
 
 async def submit_code(source_code: str, language_id: int, expected_output: Optional[str] = None, stdin: Optional[str] = None) -> str:
     """
@@ -28,7 +28,8 @@ async def submit_code(source_code: str, language_id: int, expected_output: Optio
         )
         response.raise_for_status()
         data = response.json()
-        return data["token"]
+        assert isinstance(data, dict), "Judge0 response must be a dictionary"
+        return str(data["token"])
 
 async def poll_submission(token: str, max_retries: int = 10, delay: float = 1.0) -> Dict[str, Any]:
     """
@@ -41,9 +42,14 @@ async def poll_submission(token: str, max_retries: int = 10, delay: float = 1.0)
             response = await client.get(url, timeout=5.0)
             response.raise_for_status()
             data = response.json()
+            assert isinstance(data, dict), "Judge0 response must be a dictionary"
             
             # Status IDs 1 (In Queue) and 2 (Processing) mean it's not done yet.
-            status_id = data.get("status", {}).get("id")
+            status_dict = data.get("status")
+            status_id = None
+            if isinstance(status_dict, dict):
+                status_id = status_dict.get("id")
+                
             if status_id not in [1, 2]:
                 return data
                 

@@ -9,6 +9,7 @@ class DailyPlanItem(BaseModel):
     title: str = Field(..., description="The main focus or topic for this day.")
     concepts_to_cover: List[str] = Field(..., description="A list of specific concepts or sub-topics to cover.")
     difficulty: Literal["Beginner", "Intermediate", "Advanced"] = Field(..., description="The difficulty level of the material for this day.")
+    recommended_problem_tags: List[str] = Field(..., description="Select up to 3 tags strictly from the provided unique tags list.")
 
 class JourneyRoadmap(BaseModel):
     """
