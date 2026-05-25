@@ -121,3 +121,5 @@ pytest-asyncio==0.23.6
 pytest-cov==5.0.0
 langchain-ollama
 langchain-chroma
+markdown
+weasyprint

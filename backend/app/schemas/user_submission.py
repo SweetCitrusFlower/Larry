@@ -1,5 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 from typing import Optional
+from datetime import datetime
 
 class UserSubmissionBase(BaseModel):
     submitted_code: str
@@ -27,5 +28,10 @@ class UserSubmissionResponse(UserSubmissionBase):
     stderr: Optional[str] = None
     execution_time: Optional[float] = None
     memory_usage: Optional[int] = None
+    created_at: Optional[datetime] = None
+    
+    # Decorated fields
+    task_title: Optional[str] = None
+    daily_plan_title: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)

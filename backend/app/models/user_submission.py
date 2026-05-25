@@ -1,5 +1,7 @@
 from typing import Optional, TYPE_CHECKING
-from sqlalchemy import ForeignKey
+from datetime import datetime
+from sqlalchemy import ForeignKey, DateTime
+from sqlalchemy.sql import func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.database import Base
 
@@ -21,6 +23,7 @@ class UserSubmission(Base):
     memory_usage: Mapped[Optional[int]]
     score: Mapped[Optional[float]] # e.g., percentage of test cases passed
     result_status: Mapped[str] # e.g., pending, accepted, wrong_answer, compile_error
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="submissions")

@@ -65,6 +65,22 @@ async def generate_content_for_daily_plan(
     updated_plan = await generate_daily_lesson(daily_plan_id=daily_plan_id, db=db)
     return updated_plan
 
+@router.patch("/{daily_plan_id}/complete", response_model=DailyPlanResponse)
+def mark_daily_plan_as_completed(
+    daily_plan_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    daily_plan = get_daily_plan(db, daily_plan_id=daily_plan_id)
+    if not daily_plan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Daily Plan not found")
+    verify_journey_owner(db, daily_plan.journey_id, current_user.id)
+    
+    daily_plan.completion_status = True
+    db.commit()
+    db.refresh(daily_plan)
+    return daily_plan
+
 @router.put("/{daily_plan_id}", response_model=DailyPlanResponse)
 def update_existing_daily_plan(
     daily_plan_id: int,

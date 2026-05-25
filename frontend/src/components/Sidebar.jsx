@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { journeyAPI } from '../services/api';
-import { Plus, MessageSquare, Map } from 'lucide-react';
+import { Plus, MessageSquare, Map, History } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const Sidebar = () => {
@@ -23,13 +23,24 @@ const Sidebar = () => {
 
   return (
     <aside className="w-64 bg-slate-950 border-r border-slate-800 flex flex-col h-[calc(100vh-64px)] overflow-hidden shrink-0">
-      <div className="p-4 border-b border-slate-800">
+      <div className="p-4 border-b border-slate-800 space-y-2">
         <button 
           onClick={() => navigate('/')}
           className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium transition-colors"
         >
           <Plus size={18} />
           New Journey
+        </button>
+        <button 
+          onClick={() => navigate('/submissions')}
+          className={`w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg font-medium transition-colors ${
+            location.pathname === '/submissions' 
+            ? 'bg-slate-800 text-blue-400' 
+            : 'bg-transparent text-slate-400 hover:bg-slate-900 hover:text-slate-200'
+          }`}
+        >
+          <History size={18} />
+          Submission History
         </button>
       </div>
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2 custom-scrollbar">

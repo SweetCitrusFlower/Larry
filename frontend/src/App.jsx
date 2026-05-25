@@ -5,6 +5,7 @@ import ChatPane from './components/ChatPane';
 import RoadmapDisplay from './components/RoadmapDisplay';
 import AuthModal from './components/AuthModal';
 import Workspace from './components/Workspace';
+import Submissions from './components/Submissions';
 import { LogOut, Layout, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -95,6 +96,7 @@ export default function App() {
                     </>
                   } />
                   <Route path="/workspace/:dailyPlanId" element={<Workspace />} />
+                  <Route path="/submissions" element={<Submissions />} />
                 </>
               ) : (
                 <Route path="/login" element={

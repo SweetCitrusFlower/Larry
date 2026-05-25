@@ -79,13 +79,15 @@ export const journeyAPI = {
   // generate expects { prompt: string, target_days: number }
   generate: (prompt, targetDays) =>
     api.post('/journeys/generate', { prompt, target_days: targetDays }),
+  exportPdf: (id) => api.get(`/journeys/${id}/export-pdf`, { responseType: 'blob' }),
 };
 
 // ── Daily Plan API ────────────────────────────────────────────────────────────
 export const dailyPlanAPI = {
   getDailyPlan: (id) => api.get(`/daily-plans/${id}`),
   generateContent: (id) => api.post(`/daily-plans/${id}/generate-content`),
-  getJourneyDailyPlans: (journeyId) => api.get(`/daily-plans/journey/${journeyId}`)
+  getJourneyDailyPlans: (journeyId) => api.get(`/daily-plans/journey/${journeyId}`),
+  markAsCompleted: (id) => api.patch(`/daily-plans/${id}/complete`)
 };
 
 // ── Task API ──────────────────────────────────────────────────────────────────
@@ -103,6 +105,18 @@ export const submissionAPI = {
       language_id: languageId,
       user_id: user_id,
       result_status: 'pending'
+    });
+  },
+  getMySubmissions: (skip = 0, limit = 100) => api.get(`/submissions/user?skip=${skip}&limit=${limit}`)
+};
+
+// ── Knowledge Source API ────────────────────────────────────────────────────────
+export const knowledgeSourceAPI = {
+  upload: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/knowledge-sources/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
     });
   }
 };

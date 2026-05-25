@@ -21,8 +21,19 @@ async def upload_knowledge_source(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if file.content_type != "application/pdf":
-        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
+    ALLOWED_TYPES = [
+        "application/pdf", 
+        "text/plain", 
+        "text/markdown", 
+        "text/x-python",
+        "application/x-python-code"
+    ]
+    
+    # Also check file extension as fallback since some clients send generic mimetypes for .py
+    is_code_ext = file.filename.endswith(".py")
+    
+    if file.content_type not in ALLOWED_TYPES and not is_code_ext:
+        raise HTTPException(status_code=400, detail="Only PDF, TXT, MD, and PY files are supported.")
     
     # Create the record as 'pending'
     source_in = KnowledgeSourceCreate(title=file.filename, processing_status="pending", user_id=current_user.id)
@@ -30,10 +41,17 @@ async def upload_knowledge_source(
     
     try:
         # Read the file
-        pdf_bytes = await file.read()
+        file_bytes = await file.read()
         
-        # Extract markdown from PDF using Vertex AI
-        markdown_text = await extract_text_from_pdf(pdf_bytes)
+        # Extract markdown/text depending on type
+        if file.content_type == "application/pdf":
+            markdown_text = await extract_text_from_pdf(file_bytes)
+        else:
+            # Treat as plain text/code
+            markdown_text = file_bytes.decode('utf-8')
+            if is_code_ext or 'python' in file.content_type:
+                # Wrap code in markdown block for better chunking and readability
+                markdown_text = f"```python\n{markdown_text}\n```"
         
         # Chunk the text (offloaded to threadpool)
         chunks = await asyncio.to_thread(chunk_markdown, markdown_text)

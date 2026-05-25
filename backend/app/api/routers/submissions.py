@@ -96,6 +96,12 @@ async def create_new_submission(
         )
         return await asyncio.to_thread(update_user_submission, db, db_submission=db_submission, submission_in=update_data)
 
+from sqlalchemy import select
+from sqlalchemy.orm import joinedload
+from app.models.user_submission import UserSubmission
+from app.models.task import Task
+from app.models.daily_plan import DailyPlan
+
 @router.get("/user", response_model=List[UserSubmissionResponse])
 def read_my_submissions(
     db: Session = Depends(get_db),
@@ -103,7 +109,27 @@ def read_my_submissions(
     limit: int = 100,
     current_user: User = Depends(get_current_user)
 ):
-    return get_submissions_by_user(db, user_id=current_user.id, skip=skip, limit=limit)
+    stmt = (
+        select(UserSubmission)
+        .options(joinedload(UserSubmission.task).joinedload(Task.daily_plan))
+        .where(UserSubmission.user_id == current_user.id)
+        .order_by(UserSubmission.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+    )
+    submissions = db.execute(stmt).scalars().all()
+    
+    # Decorate the submissions with titles
+    results = []
+    for sub in submissions:
+        sub_dict = UserSubmissionResponse.model_validate(sub).model_dump()
+        if sub.task:
+            sub_dict["task_title"] = sub.task.title
+            if sub.task.daily_plan:
+                sub_dict["daily_plan_title"] = sub.task.daily_plan.title
+        results.append(sub_dict)
+        
+    return results
 
 @router.get("/task/{task_id}", response_model=List[UserSubmissionResponse])
 def read_task_submissions(
