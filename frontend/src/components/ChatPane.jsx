@@ -1,16 +1,40 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { chatAPI, journeyAPI } from '../services/api';
-import { Send, Sparkles, Loader2, User, Bot } from 'lucide-react';
+import { chatAPI, journeyAPI, knowledgeSourceAPI } from '../services/api';
+import { Send, Sparkles, Loader2, User, Bot, Paperclip } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useNavigate, useParams } from 'react-router-dom';
 
-const ChatPane = ({ onRoadmapGenerated }) => {
-  const [messages, setMessages] = useState([
-    { role: 'assistant', content: "Hi, I'm Larry. What would you like to learn today? Tell me the topic and how many days you have." }
-  ]);
+const ChatPane = () => {
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [days, setDays] = useState(7);
   const [loading, setLoading] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
   const scrollRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const navigate = useNavigate();
+  const { journeyId } = useParams();
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        if (journeyId) {
+          const res = await journeyAPI.getJourney(journeyId);
+          const j = res.data;
+          setMessages([
+            { role: 'assistant', content: "Hi, I'm Larry. What would you like to learn today? Tell me the topic and how many days you have." },
+            { role: 'user', content: `I want to learn ${j.original_prompt} in ${j.target_days} days.` },
+            { role: 'assistant', content: `Great! I've generated your ${j.journey_title} roadmap. Check it out on the right.` }
+          ]);
+        } else {
+          setMessages([{ role: 'assistant', content: "Hi, I'm Larry. What would you like to learn today? Tell me the topic and how many days you have." }]);
+        }
+      } catch (err) {
+        setMessages([{ role: 'assistant', content: "Hi, I'm Larry. What would you like to learn today? Tell me the topic and how many days you have." }]);
+      }
+    };
+    fetchHistory();
+  }, [journeyId]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -44,9 +68,7 @@ const ChatPane = ({ onRoadmapGenerated }) => {
         `Great! I've generated your ${journey.journey_title} roadmap. Check it out on the right.`
       );
 
-      if (onRoadmapGenerated) {
-        onRoadmapGenerated(journey);
-      }
+      navigate(`/journey/${journey.id}`);
     } catch (err) {
       const detail =
         err.response?.data?.detail || 'Sorry, I encountered an error. Please try again.';
@@ -56,9 +78,30 @@ const ChatPane = ({ onRoadmapGenerated }) => {
     }
   };
 
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    setUploadingFile(true);
+    pushMessage('user', `Uploading file: ${file.name}...`);
+    
+    try {
+      await knowledgeSourceAPI.upload(file);
+      pushMessage('assistant', `File '${file.name}' has been successfully uploaded and added to my knowledge base. You can now ask me questions about it!`);
+    } catch (err) {
+      const detail = err.response?.data?.detail || 'Failed to upload the file. Please ensure it is a supported format (PDF, TXT, MD, PY).';
+      pushMessage('assistant', `Error: ${detail}`);
+    } finally {
+      setUploadingFile(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   return (
     <div className="flex flex-col h-full glass-card overflow-hidden">
-      <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
+      <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50 shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
           <h3 className="font-bold text-sm tracking-widest text-slate-400">LARRY AI</h3>
@@ -100,9 +143,22 @@ const ChatPane = ({ onRoadmapGenerated }) => {
             </div>
           </div>
         )}
+        {uploadingFile && (
+          <div className="flex justify-start">
+            <div className="flex gap-3">
+              <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center">
+                <Paperclip size={16} className="text-slate-400" />
+              </div>
+              <div className="bg-slate-800 p-3 rounded-2xl rounded-tl-none border border-slate-700 flex items-center gap-2">
+                <Loader2 className="animate-spin text-blue-400" size={16} />
+                <span className="text-sm text-slate-300">Processing file...</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="p-4 border-t border-slate-800 bg-slate-900/50">
+      <div className="p-4 border-t border-slate-800 bg-slate-900/50 shrink-0">
         <div className="flex items-center gap-2 mb-3">
           <span className="text-xs text-slate-500 font-medium">Duration:</span>
           <input
@@ -115,22 +171,40 @@ const ChatPane = ({ onRoadmapGenerated }) => {
           />
           <span className="text-xs text-slate-500">days</span>
         </div>
-        <div className="relative">
-          <textarea
-            rows="1"
-            placeholder="I want to learn Python..."
-            className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-4 pr-12 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
+        <div className="relative flex items-center gap-2">
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileUpload} 
+            className="hidden" 
+            accept=".pdf,.txt,.md,.py" 
           />
           <button
-            onClick={handleSend}
-            disabled={!input.trim() || loading}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600 rounded-lg transition-colors text-white"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={loading || uploadingFile}
+            className="p-3 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 rounded-xl transition-colors text-slate-400 focus:outline-none border border-slate-700 shrink-0"
+            title="Upload File"
           >
-            <Send size={18} />
+            <Paperclip size={18} />
           </button>
+          
+          <div className="relative flex-1">
+            <textarea
+              rows="1"
+              placeholder="I want to learn Python..."
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-4 pr-12 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
+            />
+            <button
+              onClick={handleSend}
+              disabled={!input.trim() || loading || uploadingFile}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600 rounded-lg transition-colors text-white"
+            >
+              <Send size={18} />
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -8,6 +8,7 @@ from app.schemas.daily_plan import DailyPlanCreate, DailyPlanUpdate, DailyPlanRe
 from app.crud.crud_daily_plan import get_daily_plan, get_daily_plans_by_journey, create_daily_plan, update_daily_plan, delete_daily_plan
 from app.crud.crud_journey import get_journey
 from app.api.deps import get_current_user
+from app.agents.content_creator import generate_daily_lesson
 
 router = APIRouter()
 
@@ -48,6 +49,36 @@ def read_daily_plan(
     if not daily_plan:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Daily Plan not found")
     verify_journey_owner(db, daily_plan.journey_id, current_user.id)
+    return daily_plan
+
+@router.post("/{daily_plan_id}/generate-content", response_model=DailyPlanResponse)
+async def generate_content_for_daily_plan(
+    daily_plan_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    daily_plan = get_daily_plan(db, daily_plan_id=daily_plan_id)
+    if not daily_plan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Daily Plan not found")
+    verify_journey_owner(db, daily_plan.journey_id, current_user.id)
+    
+    updated_plan = await generate_daily_lesson(daily_plan_id=daily_plan_id, db=db)
+    return updated_plan
+
+@router.patch("/{daily_plan_id}/complete", response_model=DailyPlanResponse)
+def mark_daily_plan_as_completed(
+    daily_plan_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    daily_plan = get_daily_plan(db, daily_plan_id=daily_plan_id)
+    if not daily_plan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Daily Plan not found")
+    verify_journey_owner(db, daily_plan.journey_id, current_user.id)
+    
+    daily_plan.completion_status = True
+    db.commit()
+    db.refresh(daily_plan)
     return daily_plan
 
 @router.put("/{daily_plan_id}", response_model=DailyPlanResponse)
