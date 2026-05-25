@@ -121,4 +121,10 @@ export const knowledgeSourceAPI = {
   }
 };
 
+export const journeysAPI = {
+  getJourneys: () => api.get('/journeys/'),
+  getJourney: (id) => api.get(`/journeys/${id}`),
+  generateJourney: (data) => api.post('/journeys/generate', data),
+};
+
 export default api;

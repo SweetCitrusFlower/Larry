@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session, joinedload
-from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
 from datetime import datetime
 from app.db.database import get_db
@@ -11,6 +10,7 @@ from app.models.user import User
 from app.models.journey import Journey
 from app.models.daily_plan import DailyPlan
 from app.agents.master_planner import generate_roadmap
+from app.schemas.journey import JourneyResponse, JourneyGenerateRequest
 
 router = APIRouter()
 
