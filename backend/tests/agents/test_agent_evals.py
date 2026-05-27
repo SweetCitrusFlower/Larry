@@ -214,15 +214,14 @@ def call_socratic_tutor(user_input: str) -> str:
 def call_master_planner(user_input: str) -> str:
     """Stub: Replace with a real call to the Master Planner agent."""
     # TODO: return await planner_agent.arun(user_input)
-    return json.dumps({
-        "days": [
-            {"day": 1, "topic": "Variables, Data Types & I/O"},
-            {"day": 2, "topic": "Control Flow: if/else, loops"},
-            {"day": 3, "topic": "Functions & Scope"},
-            {"day": 4, "topic": "Lists, Tuples & Dictionaries"},
-            {"day": 5, "topic": "File I/O & Intro to OOP"},
-        ]
-    })
+    
+    # Simple logic for the stub to return the correct number of days
+    num_days = 5
+    if "3-day" in user_input.lower():
+        num_days = 3
+        
+    days = [{"day": i, "topic": f"Topic {i}"} for i in range(1, num_days + 1)]
+    return json.dumps({"days": days})
 
 
 def call_content_creator(user_input: str, context: str) -> str:
