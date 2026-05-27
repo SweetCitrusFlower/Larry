@@ -4,11 +4,27 @@ from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.models.user import User
-from app.schemas.journey import JourneyCreate, JourneyUpdate, JourneyResponse
+from app.schemas.journey import JourneyCreate, JourneyUpdate, JourneyResponse, JourneyGenerateRequest
 from app.crud.crud_journey import get_journey, get_journeys_by_user, create_journey, update_journey, delete_journey
 from app.api.deps import get_current_user
+from app.agents.master_planner import generate_journey
 
 router = APIRouter()
+
+@router.post("/generate", status_code=status.HTTP_200_OK)
+async def generate_new_journey(
+    request: JourneyGenerateRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Generates a structured learning journey using the Master Planner AI.
+    Does NOT save it to the database automatically.
+    """
+    try:
+        result = await generate_journey(user_prompt=request.prompt, total_days=request.total_days)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Generation failed: {str(e)}")
 
 @router.post("/", response_model=JourneyResponse, status_code=status.HTTP_201_CREATED)
 def create_new_journey(

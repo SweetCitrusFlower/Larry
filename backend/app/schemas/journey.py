@@ -23,3 +23,8 @@ class JourneyResponse(JourneyBase):
     start_date: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class JourneyGenerateRequest(BaseModel):
+    prompt: str
+    total_days: int = 5
+    level: Optional[str] = "beginner"
