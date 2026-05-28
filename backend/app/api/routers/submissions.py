@@ -10,8 +10,10 @@ from app.api.deps import get_current_user
 
 router = APIRouter()
 
+from app.services import judge0_service
+
 @router.post("/", response_model=UserSubmissionResponse, status_code=status.HTTP_201_CREATED)
-def create_new_submission(
+async def create_new_submission(
     *,
     db: Session = Depends(get_db),
     submission_in: UserSubmissionCreate,
@@ -19,7 +21,36 @@ def create_new_submission(
 ):
     if submission_in.user_id != current_user.id:
          raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
-    return create_user_submission(db, submission=submission_in)
+    
+    # Insert as pending
+    submission_in.result_status = "pending"
+    db_submission = create_user_submission(db, submission=submission_in)
+
+    # Call Judge0 for execution (defaulting to Python 71)
+    try:
+        judge0_response = await judge0_service.submit_code(
+            source_code=submission_in.submitted_code, 
+            language_id=71
+        )
+        
+        status_desc = judge0_response.get("status", {}).get("description", "Unknown Status")
+        
+        update_data = UserSubmissionUpdate(
+            result_status=status_desc,
+            stdout=judge0_response.get("stdout"),
+            stderr=judge0_response.get("stderr"),
+            compile_output=judge0_response.get("compile_output")
+        )
+        db_submission = update_user_submission(db, db_submission=db_submission, submission_in=update_data)
+        
+    except Exception as e:
+        update_data = UserSubmissionUpdate(
+            result_status="System Error",
+            stderr=str(e)
+        )
+        db_submission = update_user_submission(db, db_submission=db_submission, submission_in=update_data)
+
+    return db_submission
 
 @router.get("/user", response_model=List[UserSubmissionResponse])
 def read_my_submissions(

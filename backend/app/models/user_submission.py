@@ -16,6 +16,9 @@ class UserSubmission(Base):
     submitted_code: Mapped[str]
     score: Mapped[Optional[float]] # e.g., percentage of test cases passed
     result_status: Mapped[str] # e.g., pending, accepted, wrong_answer, compile_error
+    stdout: Mapped[Optional[str]]
+    stderr: Mapped[Optional[str]]
+    compile_output: Mapped[Optional[str]]
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="submissions")
