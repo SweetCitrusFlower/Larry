@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: C:\Program Files\Git\usr\bin\kompose.exe convert
+    kompose.version: 1.34.0 (cbf2835db)
+  labels:
+    io.kompose.service: judge0-redis
+  name: judge0-redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: judge0-redis
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: C:\Program Files\Git\usr\bin\kompose.exe convert
+        kompose.version: 1.34.0 (cbf2835db)
+      labels:
+        io.kompose.service: judge0-redis
+    spec:
+      containers:
+        - args:
+            - bash
+            - -c
+            - docker-entrypoint.sh --appendonly yes --requirepass "$(REDIS)_PASSWORD"
+          env:
+            - name: JUDGE0_VERSION
+              valueFrom:
+                configMapKeyRef:
+                  key: JUDGE0_VERSION
+                  name: judge0-conf
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  key: POSTGRES_DB
+                  name: judge0-conf
+            - name: POSTGRES_HOST
+              valueFrom:
+                configMapKeyRef:
+                  key: POSTGRES_HOST
+                  name: judge0-conf
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                configMapKeyRef:
+                  key: POSTGRES_PASSWORD
+                  name: judge0-conf
+            - name: POSTGRES_PORT
+              valueFrom:
+                configMapKeyRef:
+                  key: POSTGRES_PORT
+                  name: judge0-conf
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  key: POSTGRES_USER
+                  name: judge0-conf
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  key: REDIS_HOST
+                  name: judge0-conf
+            - name: REDIS_PASSWORD
+              valueFrom:
+                configMapKeyRef:
+                  key: REDIS_PASSWORD
+                  name: judge0-conf
+            - name: REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  key: REDIS_PORT
+                  name: judge0-conf
+          image: redis:6.0
+          name: judge0-redis
+          volumeMounts:
+            - mountPath: /data
+              name: judge0-redis-data
+      restartPolicy: Always
+      volumes:
+        - name: judge0-redis-data
+          persistentVolumeClaim:
+            claimName: judge0-redis-data
