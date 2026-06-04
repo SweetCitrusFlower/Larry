@@ -16,7 +16,8 @@ class DailyPlanCreate(DailyPlanBase):
 
 class DailyPlanUpdate(BaseModel):
     theoretical_topic_content: Optional[str] = None
-    completion_status: Optional[bool] = None
+    completion_status: bool = False
+    content_status: str = "PENDING"
 
 class DailyPlanResponse(DailyPlanBase):
     id: int

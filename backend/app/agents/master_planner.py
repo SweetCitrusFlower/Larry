@@ -24,6 +24,9 @@ STRICT OUTPUT CONSTRAINTS:
        - "concepts_to_cover": (list of strings) 2-4 actionable, specific tasks or concepts.
        - "difficulty": (string: "Beginner", "Intermediate", or "Advanced")
        - "recommended_problem_tags": (list of strings) Select up to 3 tags strictly from the provided UNIQUE_TAGS list.
+       - "theoretical_topic_content": (string) A text description of the current plan's theoretical overview. 
+       - "completion_status": (bool) The flag that tells if the concepts of the current plan were completed.
+       - "content_status": (string) The status of the creation process of the plan. 
 4. You must generate EXACTLY {target_days} days in the "daily_plans" list. No more, no less.
 
 UNIQUE_TAGS LIST TO CHOOSE FROM: {unique_tags}

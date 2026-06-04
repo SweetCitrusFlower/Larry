@@ -10,6 +10,10 @@ class DailyPlanItem(BaseModel):
     concepts_to_cover: List[str] = Field(..., description="A list of specific concepts or sub-topics to cover.")
     difficulty: Literal["Beginner", "Intermediate", "Advanced"] = Field(..., description="The difficulty level of the material for this day.")
     recommended_problem_tags: List[str] = Field(..., description="Select up to 3 tags strictly from the provided unique tags list.")
+    theoretical_topic_content: str = Field(..., description="(string) A text description of the current plan's theoretical overview.")
+    completion_status: bool = Field(..., description="(bool) The flag that tells if the concepts of the current plan were completed.")
+    content_status: Literal["PENDING", "GENERATING", "COMPLETED", "FAILED"] = Field(..., description="(string) The status of the creation process of the plan.")
+    
 
 class JourneyRoadmap(BaseModel):
     """
