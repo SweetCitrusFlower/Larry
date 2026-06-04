@@ -5,6 +5,7 @@ from datetime import datetime
 from app.db.database import get_db
 import markdown
 import weasyprint
+from pydantic import BaseModel, ConfigDict
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.models.journey import Journey
@@ -22,6 +23,7 @@ class DailyPlanResponse(BaseModel):
     day_number: int
     title: str
     concepts_to_cover: List[str]
+    theoretical_topic_content: List[str]
     difficulty: str
     completion_status: bool = False
     model_config = ConfigDict(from_attributes=True)
