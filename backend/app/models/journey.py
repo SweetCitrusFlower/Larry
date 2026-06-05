@@ -6,7 +6,6 @@ from app.db.database import Base
 
 if TYPE_CHECKING:
     from app.models.user import User
-    from app.models.task import Task
     from app.models.daily_plan import DailyPlan
 
 class Journey(Base):

@@ -22,8 +22,16 @@ class DailyPlanUpdate(BaseModel):
 class DailyPlanResponse(DailyPlanBase):
     id: int
     journey_id: int
-
+    day_number: int
+    title: str
+    concepts_to_cover: List[str]
+    difficulty: str
     model_config = ConfigDict(from_attributes=True)
+    
+    recommended_problem_tags: List[str]
+    theoretical_topic_content: str
+    completion_status: bool
+    content_status: str
 
 # Schema for the AI Master Planner to ensure structured output
 class PlannerDayOutput(BaseModel):

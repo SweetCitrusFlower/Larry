@@ -24,3 +24,4 @@ class DailyPlan(Base):
     # Relationships
     journey: Mapped["Journey"] = relationship(back_populates="daily_plans")
     tasks: Mapped[List["Task"]] = relationship(back_populates="daily_plan", cascade="all, delete-orphan")
+    
