@@ -11,8 +11,8 @@ class DailyPlanResponse(BaseModel):
     difficulty: str
     model_config = ConfigDict(from_attributes=True)
     
-    recommended_problem_tags: List[str]
-    theoretical_topic_content: str
+    recommended_problem_tags: Optional[List[str]] = []
+    theoretical_topic_content: Optional[str] = ''
     completion_status: bool
     content_status: str
     

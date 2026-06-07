@@ -1,5 +1,4 @@
 import os
-from typing import Optional
 # 1. Am schimbat importul de la Google la Ollama
 from langchain_ollama import ChatOllama 
 from langchain_core.prompts import ChatPromptTemplate
@@ -74,7 +73,7 @@ async def generate_roadmap(user_goal: str, target_days: int, db: Session) -> Jou
         })
 
         assert isinstance(roadmap_data, dict), "Roadmap data must be a dictionary"
-        # Parse the dict into the Pydantic model
+        
         return JourneyRoadmap(**roadmap_data)
 
     except Exception as e:

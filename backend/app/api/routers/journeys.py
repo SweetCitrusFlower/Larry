@@ -23,10 +23,10 @@ class DailyPlanResponse(BaseModel):
     day_number: int
     title: str
     concepts_to_cover: List[str]
-    theoretical_topic_content: Optional[str]
+    theoretical_topic_content: Optional[str] = ''
     difficulty: str
     completion_status: bool = False    
-    recommended_problem_tags: List[str]
+    recommended_problem_tags: Optional[List[str]] = []
     content_status: str
     
     model_config = ConfigDict(from_attributes=True)
@@ -132,19 +132,18 @@ async def generate_new_journey(
             db.add(db_plan)
         
         db.commit()
-    
-        raise ValueError("HI")
-        
 
         # Re-query with eager load so daily_plans are included in response
         db.refresh(db_journey)
         
         journey = (
             db.query(Journey)
+            .join(Journey.daily_plans)
             .options(joinedload(Journey.daily_plans))
             .filter(Journey.id == db_journey.id)
             .first()
         )
+    
         return journey
 
     except ValueError as e:
