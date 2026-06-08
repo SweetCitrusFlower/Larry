@@ -33,22 +33,6 @@ const RoadmapDisplay = () => {
     }
   }, [journeyId]);
 
-  const handleGenerate = async (planId) => {
-    setGeneratingIds(prev => new Set(prev).add(planId));
-    try {
-      const response = await dailyPlanAPI.generateContent(planId);
-      setPlans(prev => prev.map(p => p.id === planId ? response.data : p));
-    } catch (e) {
-      console.error("Failed to generate content", e);
-    } finally {
-      setGeneratingIds(prev => {
-        const next = new Set(prev);
-        next.delete(planId);
-        return next;
-      });
-    }
-  };
-
   const handleStartLesson = (plan) => {
     navigate(`/workspace/${plan.id}`);
   };
@@ -209,8 +193,6 @@ const RoadmapDisplay = () => {
               )}
               {/* Actions */}
               <div className="mt-5 flex justify-end gap-3 border-t border-slate-800/50 pt-4">
-                {(plan.content_status === 'COMPLETED' || plan.theoretical_topic_content) ? (
-                  <>
                     <button 
                       onClick={() => handleStartLesson(plan)} 
                       className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2"
@@ -234,19 +216,7 @@ const RoadmapDisplay = () => {
                         Mark as Completed
                       </button>
                     )}
-                  </>
-                ) : (generatingIds.has(plan.id) || plan.content_status === 'GENERATING') ? (
-                  <button disabled className="bg-slate-800 text-slate-400 border border-slate-700 px-5 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 cursor-not-allowed">
-                    <Loader2 size={16} className="animate-spin" /> Generating...
-                  </button>
-                ) : (
-                  <button 
-                    onClick={() => handleGenerate(plan.id)} 
-                    className="bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-5 py-2 rounded-lg text-sm font-semibold transition-colors"
-                  >
-                    Generate Lesson
-                  </button>
-                )}
+
               </div>
             </div>
           </motion.div>
