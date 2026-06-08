@@ -226,3 +226,21 @@ The core platform is fully operational and functional:
 - **Code Execution Integration**: Judge0 is fully connected. The `UserSubmission` endpoints evaluate actual code against hidden test cases and return robust execution metadata.
 - **Frontend UI Expanded**: The React dashboard now visualizes Journeys via `RoadmapDisplay`, supports the Monaco Code Editor Workspace, provides a Socratic Tutor chat interface, and aggregates user metrics in the new `StatisticsDashboard`.
 - **Advanced Features**: Users can change curriculum difficulty dynamically, export progress to PDF, and review execution history natively.
+
+---
+
+## 🔬 Active Research & Future Modules (Development Branches)
+
+As part of the continuous evolution of the platform (and serving as modular extensions for academic evaluation), several auxiliary features are currently developed and maintained in isolated Git branches. These modules represent the next phase of the platform's architectural expansion:
+
+- **Automated AI Evaluation & Simulated Student (`agent_student` & `teste_automate` branches):** 
+  Introduces an autonomous "Simulated Student Agent" that programmatically interacts with the Master Planner and Judge0 environments. This branch pioneers an *LLM-as-a-Judge* architecture to probabilistically evaluate the quality of AI-generated curriculums against a "Golden Dataset", serving as an advanced automated QA pipeline.
+
+- **Persistent Knowledge Management (`favorite_list` branch):** 
+  Implements an end-to-end Bookmarks and Favorites system. This extension allows users to persistently save specific AI chat explanations, theoretical snippets, and coding problems into a dedicated SQLAlchemy model, enhancing the pedagogical retention of the platform.
+
+- **Interactive User Onboarding (`feature/first-time-user-tour` branch):** 
+  A frontend-driven module aimed at User Experience (UX) optimization. It provides an interactive, state-driven tour of the IDE, introducing new users to the multi-pane layout, the Socratic Tutor, and the code execution capabilities.
+
+- **Socratic Tutor Refinement (`socratic_tutor` branch):** 
+  Contains specialized prompt engineering and state-management updates for the conversational AI, ensuring it strictly adheres to pedagogical frameworks (guiding the student through questions rather than providing direct code solutions).
