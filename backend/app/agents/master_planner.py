@@ -1,6 +1,6 @@
 import os
-from typing import Optional
-from langchain_community.chat_models import ChatOllama 
+# 1. Am schimbat importul de la Google la Ollama
+from langchain_ollama import ChatOllama 
 from langchain_core.prompts import ChatPromptTemplate
 from sqlalchemy.orm import Session
 from app.schemas.planner_schemas import JourneyRoadmap
@@ -28,6 +28,9 @@ STRICT OUTPUT CONSTRAINTS:
            - "starter_code": (string) Starter code snippet.
            - "hidden_solution": (string) The complete working solution code.
        - "recommended_problem_tags": (list of strings) Select up to 3 tags strictly from the provided UNIQUE_TAGS list.
+       - "theoretical_topic_content": (string) A text description of the current plan's theoretical overview. 
+       - "completion_status": (bool) The flag that tells if the concepts of the current plan were completed.
+       - "content_status": (string) The status of the creation process of the plan. 
 4. You must generate EXACTLY {target_days} days in the "daily_plans" list. No more, no less.
 {extra_constraints}
 
@@ -77,6 +80,7 @@ async def generate_roadmap(user_goal: str, target_days: int, db: Session) -> Jou
         })
 
         assert isinstance(roadmap_data, dict), "Roadmap data must be a dictionary"
+        
         return JourneyRoadmap(**roadmap_data)
 
     except Exception as e:

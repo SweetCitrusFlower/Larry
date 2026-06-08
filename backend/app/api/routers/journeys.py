@@ -5,6 +5,7 @@ from datetime import datetime
 from app.db.database import get_db
 import markdown
 import weasyprint
+from pydantic import BaseModel, ConfigDict
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.models.journey import Journey
@@ -22,6 +23,36 @@ from app.schemas.journey import (
 router = APIRouter()
 
 
+class DailyPlanResponse(BaseModel):
+    id: int
+    journey_id: int
+    day_number: int
+    title: str
+    concepts_to_cover: List[str]
+    theoretical_topic_content: Optional[str] = ''
+    difficulty: str
+    completion_status: bool = False    
+    recommended_problem_tags: Optional[List[str]] = []
+    content_status: str
+    
+    model_config = ConfigDict(from_attributes=True)
+
+class JourneyResponse(BaseModel):
+    id: int
+    user_id: int
+    original_prompt: str
+    target_days: int
+    journey_title: Optional[str]
+    overview: Optional[str]
+    created_at: datetime
+    daily_plans: List[DailyPlanResponse] = []
+    model_config = ConfigDict(from_attributes=True)
+
+# ── Request schema ─────────────────────────────────────────────────────────────
+
+class JourneyGenerateRequest(BaseModel):
+    prompt: str
+    target_days: int
 
 # ── Endpoints ──────────────────────────────────────────────────────────────────
 
@@ -99,8 +130,11 @@ async def generate_new_journey(
                 title=plan_item.title,
                 concepts_to_cover=plan_item.concepts_to_cover,
                 difficulty=plan_item.difficulty,
-                theoretical_topic_content=plan_item.theoretical_topic_content
+                theoretical_topic_content=plan_item.theoretical_topic_content,
+                completion_status=plan_item.completion_status,
+                content_status=plan_item.content_status
             )
+            
             db.add(db_plan)
             db.flush()
 
@@ -118,12 +152,14 @@ async def generate_new_journey(
 
         # Re-query with eager load so daily_plans are included in response
         db.refresh(db_journey)
+        
         journey = (
             db.query(Journey)
             .options(joinedload(Journey.daily_plans).joinedload(DailyPlan.tasks))
             .filter(Journey.id == db_journey.id)
             .first()
         )
+    
         return journey
 
     except ValueError as e:

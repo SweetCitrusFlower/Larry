@@ -57,7 +57,11 @@ async def main():
                 title=plan_item.title,
                 concepts_to_cover=plan_item.concepts_to_cover,
                 difficulty=plan_item.difficulty,
-                recommended_problem_tags=plan_item.recommended_problem_tags
+                recommended_problem_tags=plan_item.recommended_problem_tags,
+                
+                theoretical_topic_content=plan_item.theoretical_topic_content,
+                completion_status=plan_item.completion_status,
+                content_status=plan_item.content_status
             )
             db.add(dp)
         db.commit()

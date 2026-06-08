@@ -22,6 +22,25 @@ class DailyPlanResponse(BaseModel):
     tasks: List[TaskSchemaResponse] = []
     completion_status: bool = False
     model_config = ConfigDict(from_attributes=True)
+    
+    recommended_problem_tags: Optional[List[str]] = []
+    theoretical_topic_content: Optional[str] = ''
+    completion_status: bool
+    content_status: str
+    
+
+class JourneyCreate(BaseModel):
+    user_id: int
+    original_prompt: str
+    target_days: int
+    journey_title: Optional[str] = None
+    overview: Optional[str] = None
+
+class JourneyUpdate(BaseModel):
+    original_prompt: Optional[str] = None
+    target_days: Optional[int] = None
+    journey_title: Optional[str] = None
+    overview: Optional[str] = None
 
 class JourneyGenerateRequest(BaseModel):
     prompt: str
@@ -39,5 +58,5 @@ class JourneyResponse(BaseModel):
     overview: Optional[str] = None
     created_at: datetime
     daily_plans: List[DailyPlanResponse] = []
-    
+
     model_config = ConfigDict(from_attributes=True)

@@ -7,7 +7,7 @@ from app.models.daily_plan import DailyPlan
 from app.models.task import Task
 from app.models.coding_problem import CodingProblem
 
-from langchain_google_vertexai import ChatVertexAI, VertexAIEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain_chroma import Chroma
 import chromadb
 from langchain_core.prompts import ChatPromptTemplate
@@ -39,7 +39,7 @@ async def generate_daily_lesson(daily_plan_id: int, db: Session):
         chroma_client = chromadb.HttpClient(host=chroma_host, port=chroma_port)
         
         embedding_model_name = os.getenv("VERTEX_EMBEDDING_MODEL", "text-embedding-004")
-        embeddings = VertexAIEmbeddings(model=embedding_model_name)
+        embeddings = GoogleGenerativeAIEmbeddings(model=embedding_model_name)
         
         vectorstore = Chroma(
             client=chroma_client,
@@ -53,7 +53,7 @@ async def generate_daily_lesson(daily_plan_id: int, db: Session):
         rag_context = "\n\n---\n\n".join([doc.page_content for doc in retrieved_docs])
 
         # 3. Generate Markdown Lesson using Gemini 1.5 Pro
-        llm = ChatVertexAI(
+        llm = ChatGoogleGenerativeAI(
             model="gemini-2.5-pro",
             temperature=0.3  # Low temperature for educational accuracy
         )

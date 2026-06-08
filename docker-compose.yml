@@ -1,4 +1,4 @@
-version: '3.8'
+# version: '3.8'
 
 services:
   db:
@@ -78,15 +78,15 @@ services:
     privileged: true
     restart: always
 
-  judge0-worker:
-    image: judge0/judge0:1.13.1
-    container_name: judge0-worker
-    command: ["bash", "-c", "echo 'root ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && ./scripts/workers"]
-    volumes:
-      - ./infrastructure/judge0/judge0.conf:/judge0.conf:ro
-    privileged: true
-    user: "root"
-    restart: always
+  # judge0-worker:
+    # image: judge0/judge0:1.13.1
+    # container_name: judge0-worker
+    # command: ["bash", "-c", "echo 'root ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && ./scripts/workers"]
+    # volumes:
+    #   - ./infrastructure/judge0/judge0.conf:/judge0.conf:ro
+    # privileged: true
+    # user: "root"
+    # restart: always
 
   judge0-db:
     image: postgres:13.0

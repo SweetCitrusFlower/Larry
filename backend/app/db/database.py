@@ -28,6 +28,7 @@ def init_db():
         journey,
         task,
         user_submission,
+        daily_plan,
         chat_message,
     )
     Base.metadata.create_all(bind=engine)
