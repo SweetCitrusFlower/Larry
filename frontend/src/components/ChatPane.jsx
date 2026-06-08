@@ -107,7 +107,7 @@ const ChatPane = () => {
   };
 
   return (
-    <div className="flex flex-col h-full glass-card overflow-hidden">
+    <div className="flex flex-col h-full glass-card overflow-hidden tour-chat">
       <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50 shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />

@@ -22,7 +22,7 @@ const Sidebar = () => {
   }, [location.pathname]); // Refresh when navigation changes
 
   return (
-    <aside className="w-64 bg-slate-950 border-r border-slate-800 flex flex-col h-[calc(100vh-64px)] overflow-hidden shrink-0">
+    <aside className="w-64 bg-slate-950 border-r border-slate-800 flex flex-col h-[calc(100vh-64px)] overflow-hidden shrink-0 tour-sidebar">
       <div className="p-4 border-b border-slate-800 space-y-2">
         <button 
           onClick={() => navigate('/')}

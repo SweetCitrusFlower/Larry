@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import ChatPane from './components/ChatPane';
@@ -6,7 +6,7 @@ import RoadmapDisplay from './components/RoadmapDisplay';
 import AuthModal from './components/AuthModal';
 import Workspace from './components/Workspace';
 import Submissions from './components/Submissions';
-import { LogOut, Layout, BookOpen, Star } from 'lucide-react';
+import { LogOut, Layout, BookOpen, Star, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import Editor from '@monaco-editor/react';
@@ -15,6 +15,7 @@ import FavoriteButton from './components/FavoriteButton';
 import FavoritesPanel from './components/FavoritesPanel';
 import MaterialExplorer from './components/MaterialExplorer';
 import { FavoritesProvider } from './context/FavoritesContext';
+import TourGuide from './components/TourGuide';
 
 // A wrapper for the Dashboard (New Journey view)
 const Dashboard = () => {
@@ -46,6 +47,7 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(!isAuthenticated);
   const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
+  const tourRef = useRef();
 
   // Sync modal state if auth state changes
   useEffect(() => {
@@ -59,8 +61,15 @@ export default function App() {
     setIsAuthenticated(false);
   };
 
+  const handleReplayTour = () => {
+    if (tourRef.current) {
+      tourRef.current.startTour();
+    }
+  };
+
   return (
     <FavoritesProvider isAuthenticated={isAuthenticated}>
+      <TourGuide ref={tourRef} />
       <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col font-sans h-screen overflow-hidden">
       {/* Header */}
       <header className="h-16 border-b border-slate-800 bg-slate-950/50 backdrop-blur-md flex items-center justify-between px-8 shrink-0 z-40">
@@ -77,8 +86,15 @@ export default function App() {
           {isAuthenticated && (
             <>
               <button 
+                onClick={handleReplayTour}
+                className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                <HelpCircle size={16} />
+                <span>Replay Tour</span>
+              </button>
+              <button 
                 onClick={() => setIsFavoritesOpen(true)}
-                className="flex items-center gap-2 text-sm text-yellow-400 hover:text-yellow-300 transition-colors"
+                className="tour-favorites flex items-center gap-2 text-sm text-yellow-400 hover:text-yellow-300 transition-colors"
               >
                 <Star size={16} />
                 <span>Favorites</span>
@@ -141,6 +157,13 @@ export default function App() {
         onAuthSuccess={() => {
           setIsAuthenticated(true);
           setIsAuthModalOpen(false);
+          
+          // Trigger tutorial only on first sign-up/login
+          const hasSeenTutorial = localStorage.getItem('hasSeenTutorial');
+          if (!hasSeenTutorial && tourRef.current) {
+            localStorage.setItem('hasSeenTutorial', 'true');
+            tourRef.current.startTour();
+          }
         }}
       />
       
