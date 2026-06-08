@@ -1,9 +1,9 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, BackgroundTasks
 from sqlalchemy.orm import Session
 import asyncio
 
-from app.db.database import get_db
+from app.db.database import get_db, SessionLocal
 from app.models.user import User
 from app.schemas.knowledge_source import KnowledgeSourceCreate, KnowledgeSourceUpdate, KnowledgeSourceResponse
 from app.crud.crud_knowledge_source import get_knowledge_source, get_knowledge_sources, create_knowledge_source, update_knowledge_source, delete_knowledge_source
@@ -15,8 +15,43 @@ from app.services.vision_parser.vector_store import store_chunks_in_chroma
 
 router = APIRouter()
 
+async def process_uploaded_file_background(
+    source_id: int,
+    file_bytes: bytes,
+    filename: str,
+    content_type: str,
+    is_code_ext: bool
+):
+    db = SessionLocal()
+    try:
+        db_source = await asyncio.to_thread(get_knowledge_source, db, source_id=source_id)
+        if not db_source:
+            return
+
+        if content_type == "application/pdf":
+            markdown_text = await extract_text_from_pdf(file_bytes)
+        else:
+            markdown_text = file_bytes.decode('utf-8')
+            if is_code_ext or 'python' in content_type:
+                markdown_text = f"```python\n{markdown_text}\n```"
+        
+        chunks = await asyncio.to_thread(chunk_markdown, markdown_text)
+        await store_chunks_in_chroma(chunks, filename)
+        
+        source_update = KnowledgeSourceUpdate(processing_status="completed")
+        await asyncio.to_thread(update_knowledge_source, db, db_source=db_source, source_in=source_update)
+    except Exception as e:
+        print(f"Background task failed for {filename}: {str(e)}")
+        db_source = await asyncio.to_thread(get_knowledge_source, db, source_id=source_id)
+        if db_source:
+            source_update = KnowledgeSourceUpdate(processing_status="failed")
+            await asyncio.to_thread(update_knowledge_source, db, db_source=db_source, source_in=source_update)
+    finally:
+        db.close()
+
 @router.post("/upload", response_model=KnowledgeSourceResponse, status_code=status.HTTP_201_CREATED)
 async def upload_knowledge_source(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -40,33 +75,23 @@ async def upload_knowledge_source(
     db_source = await asyncio.to_thread(create_knowledge_source, db, source=source_in)
     
     try:
-        # Read the file
+        # Read the file into memory
         file_bytes = await file.read()
         
-        # Extract markdown/text depending on type
-        if file.content_type == "application/pdf":
-            markdown_text = await extract_text_from_pdf(file_bytes)
-        else:
-            # Treat as plain text/code
-            markdown_text = file_bytes.decode('utf-8')
-            if is_code_ext or 'python' in file.content_type:
-                # Wrap code in markdown block for better chunking and readability
-                markdown_text = f"```python\n{markdown_text}\n```"
+        # Enqueue the background task
+        background_tasks.add_task(
+            process_uploaded_file_background,
+            db_source.id,
+            file_bytes,
+            file.filename,
+            file.content_type,
+            is_code_ext
+        )
         
-        # Chunk the text (offloaded to threadpool)
-        chunks = await asyncio.to_thread(chunk_markdown, markdown_text)
-        
-        # Store in ChromaDB
-        await store_chunks_in_chroma(chunks, file.filename)
-        
-        # Update status to completed
-        source_update = KnowledgeSourceUpdate(processing_status="completed")
-        return await asyncio.to_thread(update_knowledge_source, db, db_source=db_source, source_in=source_update)
+        # Immediately return the pending record
+        return db_source
     except Exception as e:
-        # Update status to failed
-        source_update = KnowledgeSourceUpdate(processing_status="failed")
-        await asyncio.to_thread(update_knowledge_source, db, db_source=db_source, source_in=source_update)
-        raise HTTPException(status_code=500, detail=f"Failed to process PDF: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to queue file processing: {str(e)}")
 
 @router.post("/", response_model=KnowledgeSourceResponse, status_code=status.HTTP_201_CREATED)
 def create_new_knowledge_source(
@@ -85,8 +110,8 @@ def read_knowledge_sources(
     limit: int = 100,
     current_user: User = Depends(get_current_user)
 ):
-    # Depending on requirements, we could filter by user_id. The T0 baseline implies strict ownership.
-    return get_knowledge_sources(db, skip=skip, limit=limit, user_id=current_user.id)
+    # Fetch materials globally, so we omit user_id
+    return get_knowledge_sources(db, skip=skip, limit=limit)
 
 @router.get("/{source_id}", response_model=KnowledgeSourceResponse)
 def read_knowledge_source(

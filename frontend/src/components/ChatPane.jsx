@@ -83,14 +83,21 @@ const ChatPane = () => {
     if (!file) return;
     
     setUploadingFile(true);
-    pushMessage('user', `Uploading file: ${file.name}...`);
+    const userMsg = `Uploading file: ${file.name}...`;
+    pushMessage('user', userMsg);
     
     try {
+      await chatAPI.sendMessage(userMsg, 'user');
       await knowledgeSourceAPI.upload(file);
-      pushMessage('assistant', `File '${file.name}' has been successfully uploaded and added to my knowledge base. You can now ask me questions about it!`);
+      
+      const assistantMsg = `File '${file.name}' has been successfully uploaded and added to my knowledge base. You can now ask me questions about it!`;
+      pushMessage('assistant', assistantMsg);
+      await chatAPI.sendMessage(assistantMsg, 'assistant');
     } catch (err) {
       const detail = err.response?.data?.detail || 'Failed to upload the file. Please ensure it is a supported format (PDF, TXT, MD, PY).';
-      pushMessage('assistant', `Error: ${detail}`);
+      const errMsg = `Error: ${detail}`;
+      pushMessage('assistant', errMsg);
+      await chatAPI.sendMessage(errMsg, 'assistant');
     } finally {
       setUploadingFile(false);
       if (fileInputRef.current) {

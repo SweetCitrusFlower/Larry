@@ -13,6 +13,8 @@ import Editor from '@monaco-editor/react';
 import axios from 'axios';
 import FavoriteButton from './components/FavoriteButton';
 import FavoritesPanel from './components/FavoritesPanel';
+import MaterialExplorer from './components/MaterialExplorer';
+import { FavoritesProvider } from './context/FavoritesContext';
 
 // A wrapper for the Dashboard (New Journey view)
 const Dashboard = () => {
@@ -58,7 +60,8 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col font-sans h-screen overflow-hidden">
+    <FavoritesProvider isAuthenticated={isAuthenticated}>
+      <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col font-sans h-screen overflow-hidden">
       {/* Header */}
       <header className="h-16 border-b border-slate-800 bg-slate-950/50 backdrop-blur-md flex items-center justify-between px-8 shrink-0 z-40">
         <div className="flex items-center gap-3">
@@ -112,6 +115,7 @@ export default function App() {
                   } />
                   <Route path="/workspace/:dailyPlanId" element={<Workspace />} />
                   <Route path="/submissions" element={<Submissions />} />
+                  <Route path="/materials" element={<MaterialExplorer />} />
                 </>
               ) : (
                 <Route path="/login" element={
@@ -145,5 +149,6 @@ export default function App() {
         onClose={() => setIsFavoritesOpen(false)} 
       />
     </div>
+    </FavoritesProvider>
   );
 }
