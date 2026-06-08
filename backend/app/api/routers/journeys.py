@@ -8,11 +8,21 @@ from app.db.database import get_db
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.models.journey import Journey, DailyPlan
-from app.agents.master_planner import generate_roadmap
+from app.models.task import Task
+from app.agents.master_planner import generate_roadmap, regenerate_roadmap
 
 router = APIRouter()
 
 # ── Response schemas ──────────────────────────────────────────────────────────
+
+class TaskSchemaResponse(BaseModel):
+    id: int
+    title: str
+    problem_id: str
+    description: str
+    starter_code: str
+    hidden_solution: str
+    model_config = ConfigDict(from_attributes=True)
 
 class DailyPlanResponse(BaseModel):
     id: int
@@ -21,6 +31,8 @@ class DailyPlanResponse(BaseModel):
     title: str
     concepts_to_cover: List[str]
     difficulty: str
+    theoretical_topic_content: Optional[str] = None
+    tasks: List[TaskSchemaResponse] = []
     model_config = ConfigDict(from_attributes=True)
 
 class JourneyResponse(BaseModel):
@@ -39,6 +51,9 @@ class JourneyResponse(BaseModel):
 class JourneyGenerateRequest(BaseModel):
     prompt: str
     target_days: int
+
+class JourneyDifficultyUpdate(BaseModel):
+    difficulty: str
 
 # ── Endpoints ──────────────────────────────────────────────────────────────────
 
@@ -112,9 +127,21 @@ async def generate_new_journey(
                 day_number=plan_item.day_number,
                 title=plan_item.title,
                 concepts_to_cover=plan_item.concepts_to_cover,
-                difficulty=plan_item.difficulty
+                difficulty=plan_item.difficulty,
+                theoretical_topic_content=plan_item.theoretical_topic_content
             )
             db.add(db_plan)
+            db.flush()
+
+            db_task = Task(
+                daily_plan_id=db_plan.id,
+                title=plan_item.task.problem_title,
+                problem_id="ai_generated",
+                description=plan_item.task.problem_description,
+                starter_code=plan_item.task.starter_code,
+                hidden_solution=plan_item.task.hidden_solution
+            )
+            db.add(db_task)
         
         db.commit()
 
@@ -136,4 +163,73 @@ async def generate_new_journey(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred during journey generation: {str(e)}"
+        )
+
+@router.put("/{journey_id}/difficulty", response_model=JourneyResponse)
+async def update_journey_difficulty(
+    journey_id: int,
+    request: JourneyDifficultyUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Endpoint to regenerate a journey roadmap with a new minimum difficulty.
+    """
+    db_journey = db.query(Journey).filter(Journey.id == journey_id, Journey.user_id == current_user.id).first()
+    if not db_journey:
+        raise HTTPException(status_code=404, detail="Journey not found")
+
+    try:
+        roadmap = await regenerate_roadmap(
+            original_prompt=db_journey.original_prompt,
+            target_days=db_journey.target_days,
+            min_difficulty=request.difficulty
+        )
+
+        # Delete existing daily plans (which cascades to tasks)
+        db.query(DailyPlan).filter(DailyPlan.journey_id == journey_id).delete()
+        db.flush()
+
+        for plan_item in roadmap.daily_plans:
+            db_plan = DailyPlan(
+                journey_id=db_journey.id,
+                day_number=plan_item.day_number,
+                title=plan_item.title,
+                concepts_to_cover=plan_item.concepts_to_cover,
+                difficulty=plan_item.difficulty,
+                theoretical_topic_content=plan_item.theoretical_topic_content
+            )
+            db.add(db_plan)
+            db.flush()
+
+            db_task = Task(
+                daily_plan_id=db_plan.id,
+                title=plan_item.task.problem_title,
+                problem_id="ai_generated",
+                description=plan_item.task.problem_description,
+                starter_code=plan_item.task.starter_code,
+                hidden_solution=plan_item.task.hidden_solution
+            )
+            db.add(db_task)
+        
+        db.commit()
+
+        # Re-query with eager load so daily_plans are included in response
+        db.refresh(db_journey)
+        journey = (
+            db.query(Journey)
+            .options(joinedload(Journey.daily_plans).joinedload(DailyPlan.tasks))
+            .filter(Journey.id == db_journey.id)
+            .first()
+        )
+        return journey
+
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        db.rollback()
+        print(f"Error during journey regeneration: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred during journey regeneration: {str(e)}"
         )

@@ -98,11 +98,35 @@ function GenerateModal({ onClose, onGenerated }) {
 // ════════════════════════════════════════════════════════════════════════════
 // ROADMAP CARD
 // ════════════════════════════════════════════════════════════════════════════
-function RoadmapCard({ journey }) {
+const diffColor = { Beginner: '#22c55e', Intermediate: '#eab308', Advanced: '#ef4444' };
+
+function RoadmapCard({ journey, onUpdateJourney }) {
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleDifficultyChange = async (newDifficulty) => {
+    setLoading(true);
+    try {
+      // We assume api is imported or available in scope (it's imported as `api` in App.jsx's active version typically, wait, let's use `axios` if `api` is not defined, or check if `api` is defined)
+      // `api` is used on line 274: `const res = await api.get('/journeys/');`
+      // So `api` is available in scope or we must ensure it. Actually `api` is not imported at the top, but let's assume it's available or we can use `window.api`. Wait, I will add import api from './services/api' at the top if needed.
+      const { default: api } = await import('./services/api');
+      const res = await api.put(`/journeys/${journey.id}/difficulty`, { difficulty: newDifficulty });
+      if (onUpdateJourney) onUpdateJourney(res.data);
+    } catch (err) {
+      alert("Failed to update difficulty.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className={`roadmap-card ${open ? 'expanded' : ''}`}>
+    <div className={`roadmap-card ${open ? 'expanded' : ''}`} style={{ position: 'relative' }}>
+      {loading && (
+        <div style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.7)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '1rem'}}>
+          <div className="spinner-row"><span className="spin" /> Regenerating...</div>
+        </div>
+      )}
       <div className="roadmap-header" onClick={() => setOpen(o => !o)}>
         <div className="roadmap-meta">
           <span className="roadmap-tag">{journey.target_days} zile</span>
@@ -116,12 +140,31 @@ function RoadmapCard({ journey }) {
       {open && (
         <div className="daily-plans">
           {[...(journey.daily_plans || [])].sort((a, b) => a.day_number - b.day_number).map(plan => (
-            <div key={plan.id} className="day-card">
-              <div className="day-header">
+            <div key={plan.id} className="day-card" style={{ marginBottom: '1rem' }}>
+              <div className="day-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span className="day-number">Ziua {plan.day_number}</span>
-                <span className="diff-badge" style={{ background: diffColor[plan.difficulty] + '22', color: diffColor[plan.difficulty], border: `1px solid ${diffColor[plan.difficulty]}` }}>
-                  {plan.difficulty}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Difficulty:</span>
+                  <select 
+                    value={plan.difficulty} 
+                    onChange={(e) => handleDifficultyChange(e.target.value)}
+                    style={{
+                      background: diffColor[plan.difficulty] + '22',
+                      color: diffColor[plan.difficulty],
+                      border: `1px solid ${diffColor[plan.difficulty]}`,
+                      borderRadius: '4px',
+                      padding: '2px 6px',
+                      outline: 'none',
+                      cursor: 'pointer',
+                      fontSize: '0.85rem'
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                  </select>
+                </div>
               </div>
               <h3 className="day-title">{plan.title}</h3>
               <ul className="concepts-list">
@@ -129,6 +172,21 @@ function RoadmapCard({ journey }) {
                   <li key={i}><span className="bullet">→</span>{c}</li>
                 ))}
               </ul>
+              {plan.theoretical_topic_content && (
+                <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
+                  <h4 style={{ fontSize: '0.9rem', color: '#94a3b8', marginBottom: '0.5rem' }}>Theory</h4>
+                  <p style={{ fontSize: '0.9rem', color: '#cbd5e1' }}>{plan.theoretical_topic_content}</p>
+                </div>
+              )}
+              {plan.tasks && plan.tasks.length > 0 && (
+                <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.2)', borderRadius: '8px' }}>
+                  <h4 style={{ fontSize: '0.9rem', color: '#60a5fa', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/><path d="M14 3v5h5"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+                    Task: {plan.tasks[0].title}
+                  </h4>
+                  <p style={{ fontSize: '0.85rem', color: '#94a3b8' }}>{plan.tasks[0].description}</p>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -320,7 +378,13 @@ export default function App() {
           </div>
         ) : (
           <div className="roadmaps-grid">
-            {journeys.map(j => <RoadmapCard key={j.id} journey={j} />)}
+            {journeys.map(j => (
+              <RoadmapCard 
+                key={j.id} 
+                journey={j} 
+                onUpdateJourney={(updatedJourney) => setJourneys(journeys.map(old => old.id === updatedJourney.id ? updatedJourney : old))} 
+              />
+            ))}
           </div>
         )}
       </main>
