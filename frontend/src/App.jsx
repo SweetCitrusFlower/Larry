@@ -4,6 +4,7 @@ import RoadmapDisplay from './components/RoadmapDisplay';
 import AuthModal from './components/AuthModal';
 import { LogOut, Layout, BookOpen, User as UserIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import StatisticsDashboard from './components/StatisticsDashboard';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
@@ -324,6 +325,7 @@ export default function App() {
   const [loadingJourneys, setLoadingJourneys] = useState(false);
   const [showGenerate, setShowGenerate] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [currentView, setCurrentView] = useState('roadmaps');
   const [error, setError] = useState('');
 
   const fetchJourneys = async () => {
@@ -349,19 +351,26 @@ export default function App() {
       <nav className="navbar">
         <div className="nav-brand">⚡ Larry</div>
         <div className="nav-actions">
+          <button className="btn-ghost" onClick={() => setCurrentView(v => v === 'stats' ? 'roadmaps' : 'stats')}>
+            {currentView === 'stats' ? 'Roadmaps' : 'Statistici'}
+          </button>
           <button className="btn-primary" id="btn-new-roadmap" onClick={() => setShowGenerate(true)}>+ Roadmap Nou</button>
           <button className="btn-ghost" onClick={logout}>Ieșire</button>
         </div>
       </nav>
 
-      {/* HERO */}
-      <div className="hero">
-        <h1>📚 Roadmaps-urile Mele</h1>
-        <p>Planurile tale de învățare generate de AI</p>
-      </div>
+      {currentView === 'stats' ? (
+        <StatisticsDashboard />
+      ) : (
+        <>
+          {/* HERO */}
+          <div className="hero">
+            <h1>📚 Roadmaps-urile Mele</h1>
+            <p>Planurile tale de învățare generate de AI</p>
+          </div>
 
-      {/* CONTENT */}
-      <main className="main-content">
+          {/* CONTENT */}
+          <main className="main-content">
         {error && <div className="alert-err">{error}</div>}
 
         {loadingJourneys ? (
@@ -388,6 +397,8 @@ export default function App() {
           </div>
         )}
       </main>
+      </>
+      )}
 
       {/* MODALS */}
       {showGenerate && (

@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.models.user import User
-from app.schemas.user_submission import UserSubmissionCreate, UserSubmissionUpdate, UserSubmissionResponse
-from app.crud.crud_user_submission import get_user_submission, get_submissions_by_user, get_submissions_by_task, create_user_submission, update_user_submission, delete_user_submission
+from app.schemas.user_submission import UserSubmissionCreate, UserSubmissionUpdate, UserSubmissionResponse, UserStatisticsResponse
+from app.crud.crud_user_submission import get_user_submission, get_submissions_by_user, get_submissions_by_task, create_user_submission, update_user_submission, delete_user_submission, get_user_statistics
 from app.api.deps import get_current_user
 
 router = APIRouter()
@@ -20,6 +20,13 @@ def create_new_submission(
     if submission_in.user_id != current_user.id:
          raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
     return create_user_submission(db, submission=submission_in)
+
+@router.get("/user/statistics", response_model=UserStatisticsResponse)
+def read_user_statistics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return get_user_statistics(db, user_id=current_user.id)
 
 @router.get("/user", response_model=List[UserSubmissionResponse])
 def read_my_submissions(
