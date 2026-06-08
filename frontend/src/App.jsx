@@ -18,235 +18,12 @@ function App() {
   };
 
   return (
-<<<<<<< HEAD
-    <div className="auth-bg">
-      <div className="auth-card">
-        <div className="auth-logo">⚡ Larry</div>
-        <h1 className="auth-title">AI Coding Coach</h1>
-        <p className="auth-sub">{mode === 'login' ? 'Bun venit înapoi!' : 'Creează un cont nou'}</p>
-
-        <div className="auth-tabs">
-          <button className={mode === 'login' ? 'active' : ''} onClick={() => setMode('login')}>Login</button>
-          <button className={mode === 'register' ? 'active' : ''} onClick={() => setMode('register')}>Register</button>
-        </div>
-
-        <form onSubmit={submit} className="auth-form">
-          <label>Email</label>
-          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required />
-          <label>Parolă</label>
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required />
-          {error && <p className={`auth-msg ${error.includes('creat') ? 'ok' : 'err'}`}>{error}</p>}
-          <button type="submit" className="btn-primary" disabled={loading}>
-            {loading ? 'Se procesează...' : mode === 'login' ? 'Intră în cont' : 'Creează cont'}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-// GENERATE MODAL
-// ════════════════════════════════════════════════════════════════════════════
-function GenerateModal({ onClose, onGenerated }) {
-  const [prompt, setPrompt] = useState('');
-  const [days, setDays] = useState(7);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const submit = async e => {
-    e.preventDefault();
-    setError(''); setLoading(true);
-    try {
-      const res = await api.post('/journeys/generate', { prompt, target_days: days });
-      onGenerated(res.data);
-      onClose();
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Eroare la generare.');
-    } finally { setLoading(false); }
-  };
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-card" onClick={e => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}>✕</button>
-        <h2>🗺️ Generează Roadmap Nou</h2>
-        <form onSubmit={submit}>
-          <label>Ce vrei să înveți?</label>
-          <textarea
-            value={prompt}
-            onChange={e => setPrompt(e.target.value)}
-            placeholder="ex: React, Docker, Algoritmi de sortare..."
-            rows={3}
-            required
-          />
-          <label>Număr de zile: <strong>{days}</strong></label>
-          <input type="range" min={3} max={30} value={days} onChange={e => setDays(+e.target.value)} />
-          {error && <p className="auth-msg err">{error}</p>}
-          <button type="submit" className="btn-primary" disabled={loading}>
-            {loading ? (
-              <span className="spinner-row">
-                <span className="spin" /> Generez cu AI...
-              </span>
-            ) : '✨ Generează'}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-// ROADMAP CARD
-// ════════════════════════════════════════════════════════════════════════════
-const diffColor = { Beginner: '#22c55e', Intermediate: '#eab308', Advanced: '#ef4444' };
-
-function RoadmapCard({ journey, onUpdateJourney }) {
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  const handleDifficultyChange = async (newDifficulty) => {
-    setLoading(true);
-    try {
-      // We assume api is imported or available in scope (it's imported as `api` in App.jsx's active version typically, wait, let's use `axios` if `api` is not defined, or check if `api` is defined)
-      // `api` is used on line 274: `const res = await api.get('/journeys/');`
-      // So `api` is available in scope or we must ensure it. Actually `api` is not imported at the top, but let's assume it's available or we can use `window.api`. Wait, I will add import api from './services/api' at the top if needed.
-      const { default: api } = await import('./services/api');
-      const res = await api.put(`/journeys/${journey.id}/difficulty`, { difficulty: newDifficulty });
-      if (onUpdateJourney) onUpdateJourney(res.data);
-    } catch (err) {
-      alert("Failed to update difficulty.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className={`roadmap-card ${open ? 'expanded' : ''}`} style={{ position: 'relative' }}>
-      {loading && (
-        <div style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.7)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '1rem'}}>
-          <div className="spinner-row"><span className="spin" /> Regenerating...</div>
-        </div>
-      )}
-      <div className="roadmap-header" onClick={() => setOpen(o => !o)}>
-        <div className="roadmap-meta">
-          <span className="roadmap-tag">{journey.target_days} zile</span>
-          <span className="roadmap-date">{new Date(journey.created_at).toLocaleDateString('ro-RO')}</span>
-        </div>
-        <h2 className="roadmap-title">{journey.journey_title || journey.original_prompt}</h2>
-        <p className="roadmap-overview">{journey.overview}</p>
-        <button className="expand-btn">{open ? '▲ Restrânge' : '▼ Vezi planul zilnic'}</button>
-      </div>
-
-      {open && (
-        <div className="daily-plans">
-          {[...(journey.daily_plans || [])].sort((a, b) => a.day_number - b.day_number).map(plan => (
-            <div key={plan.id} className="day-card" style={{ marginBottom: '1rem' }}>
-              <div className="day-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span className="day-number">Ziua {plan.day_number}</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Difficulty:</span>
-                  <select 
-                    value={plan.difficulty} 
-                    onChange={(e) => handleDifficultyChange(e.target.value)}
-                    style={{
-                      background: diffColor[plan.difficulty] + '22',
-                      color: diffColor[plan.difficulty],
-                      border: `1px solid ${diffColor[plan.difficulty]}`,
-                      borderRadius: '4px',
-                      padding: '2px 6px',
-                      outline: 'none',
-                      cursor: 'pointer',
-                      fontSize: '0.85rem'
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <option value="Beginner">Beginner</option>
-                    <option value="Intermediate">Intermediate</option>
-                    <option value="Advanced">Advanced</option>
-                  </select>
-                </div>
-              </div>
-              <h3 className="day-title">{plan.title}</h3>
-              <ul className="concepts-list">
-                {plan.concepts_to_cover?.map((c, i) => (
-                  <li key={i}><span className="bullet">→</span>{c}</li>
-                ))}
-              </ul>
-              {plan.theoretical_topic_content && (
-                <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
-                  <h4 style={{ fontSize: '0.9rem', color: '#94a3b8', marginBottom: '0.5rem' }}>Theory</h4>
-                  <p style={{ fontSize: '0.9rem', color: '#cbd5e1' }}>{plan.theoretical_topic_content}</p>
-                </div>
-              )}
-              {plan.tasks && plan.tasks.length > 0 && (
-                <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.2)', borderRadius: '8px' }}>
-                  <h4 style={{ fontSize: '0.9rem', color: '#60a5fa', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/><path d="M14 3v5h5"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
-                    Task: {plan.tasks[0].title}
-                  </h4>
-                  <p style={{ fontSize: '0.85rem', color: '#94a3b8' }}>{plan.tasks[0].description}</p>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-// AI CHAT PANEL
-// ════════════════════════════════════════════════════════════════════════════
-function ChatPanel({ onClose }) {
-  const [messages, setMessages] = useState([
-    { role: 'assistant', text: 'Salut! Sunt Larry, asistentul tău AI. Cu ce te pot ajuta?' }
-  ]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const bottomRef = useRef(null);
-
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
-
-  const send = async e => {
-    e.preventDefault();
-    if (!input.trim()) return;
-    const userMsg = { role: 'user', text: input };
-    setMessages(m => [...m, userMsg]);
-    setInput('');
-    setLoading(true);
-    try {
-      // Use the chat-messages endpoint or fall back to a simple echo
-      const res = await axios.post('http://127.0.0.1:8000/api/v1/chat-messages/', {
-        user_id: 1,
-        role: 'user',
-        content: input
-      }, { headers: { Authorization: `Bearer ${localStorage.getItem('larry_token')}` } });
-      setMessages(m => [...m, { role: 'assistant', text: res.data?.content || 'Am primit mesajul!' }]);
-    } catch {
-      setMessages(m => [...m, { role: 'assistant', text: 'Scuze, nu pot răspunde momentan. Verifică că backend-ul rulează.' }]);
-    } finally { setLoading(false); }
-  };
-
-  return (
-    <div className="chat-panel">
-      <div className="chat-header">
-        <span>⚡ Larry AI</span>
-        <button onClick={onClose} className="chat-close">✕</button>
-      </div>
-      <div className="chat-messages">
-        {messages.map((m, i) => (
-          <div key={i} className={`chat-bubble ${m.role}`}>
-            {m.text}
-=======
     <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col font-sans">
       {/* Header */}
       <header className="h-16 border-b border-slate-800 bg-slate-950/50 backdrop-blur-md flex items-center justify-between px-8 sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
             <Layout size={18} className="text-white" />
->>>>>>> f8b31b07b79c48091cc2a86744b0ab68ab0afcb4
           </div>
           <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
             LARRY
@@ -262,7 +39,7 @@ function ChatPanel({ onClose }) {
                 <a href="#" className="hover:text-white transition-colors">Resources</a>
               </nav>
               <div className="h-4 w-px bg-slate-800 hidden md:block" />
-              <button 
+              <button
                 onClick={handleLogout}
                 className="flex items-center gap-2 text-sm text-slate-400 hover:text-red-400 transition-colors"
               >
@@ -286,7 +63,7 @@ function ChatPanel({ onClose }) {
             {currentRoadmap ? (
               <RoadmapDisplay key="roadmap" roadmap={currentRoadmap} />
             ) : (
-              <motion.div 
+              <motion.div
                 key="placeholder"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -298,7 +75,7 @@ function ChatPanel({ onClose }) {
                 </div>
                 <h2 className="text-2xl font-bold text-white mb-2">Ready to Start?</h2>
                 <p className="text-slate-500 max-w-sm">
-                  Ask Larry to generate a roadmap for any skill you want to master. 
+                  Ask Larry to generate a roadmap for any skill you want to master.
                   Your personalized path to success starts here.
                 </p>
               </motion.div>
@@ -307,8 +84,8 @@ function ChatPanel({ onClose }) {
         </div>
       </main>
 
-      <AuthModal 
-        isOpen={isAuthModalOpen} 
+      <AuthModal
+        isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         onAuthSuccess={() => setIsAuthenticated(true)}
       />
@@ -371,33 +148,33 @@ export default function App() {
 
           {/* CONTENT */}
           <main className="main-content">
-        {error && <div className="alert-err">{error}</div>}
+            {error && <div className="alert-err">{error}</div>}
 
-        {loadingJourneys ? (
-          <div className="loading-state">
-            <div className="big-spin" />
-            <p>Se încarcă roadmaps-urile...</p>
-          </div>
-        ) : journeys.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-icon">🗺️</div>
-            <h2>Niciun roadmap încă</h2>
-            <p>Generează primul tău plan de învățare personalizat cu AI!</p>
-            <button className="btn-primary" onClick={() => setShowGenerate(true)}>✨ Generează primul roadmap</button>
-          </div>
-        ) : (
-          <div className="roadmaps-grid">
-            {journeys.map(j => (
-              <RoadmapCard 
-                key={j.id} 
-                journey={j} 
-                onUpdateJourney={(updatedJourney) => setJourneys(journeys.map(old => old.id === updatedJourney.id ? updatedJourney : old))} 
-              />
-            ))}
-          </div>
-        )}
-      </main>
-      </>
+            {loadingJourneys ? (
+              <div className="loading-state">
+                <div className="big-spin" />
+                <p>Se încarcă roadmaps-urile...</p>
+              </div>
+            ) : journeys.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">🗺️</div>
+                <h2>Niciun roadmap încă</h2>
+                <p>Generează primul tău plan de învățare personalizat cu AI!</p>
+                <button className="btn-primary" onClick={() => setShowGenerate(true)}>✨ Generează primul roadmap</button>
+              </div>
+            ) : (
+              <div className="roadmaps-grid">
+                {journeys.map(j => (
+                  <RoadmapCard
+                    key={j.id}
+                    journey={j}
+                    onUpdateJourney={(updatedJourney) => setJourneys(journeys.map(old => old.id === updatedJourney.id ? updatedJourney : old))}
+                  />
+                ))}
+              </div>
+            )}
+          </main>
+        </>
       )}
 
       {/* MODALS */}
