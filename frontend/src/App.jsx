@@ -117,23 +117,16 @@ export default function App() {
                   <Route path="/workspace/:dailyPlanId" element={<Workspace />} />
                   <Route path="/submissions" element={<Submissions />} />
                   <Route path="/materials" element={<MaterialExplorer />} />
+                  <Route path="/statistics" element={<StatisticsDashboard />} />
                 </>
               ) : (
+              <>
                 <Route path="/login" element={
                   <div className="flex-1 flex flex-col items-center justify-center text-slate-500">
                      <p>Please log in to continue.</p>
                   </div>
                 } />
-                <Route path="/workspace/:dailyPlanId" element={<Workspace />} />
-                <Route path="/submissions" element={<Submissions />} />
-                <Route path="/statistics" element={<StatisticsDashboard />} />
               </>
-            ) : (
-              <Route path="/login" element={
-                <div className="flex-1 flex flex-col items-center justify-center text-slate-500">
-                  <p>Please log in to continue.</p>
-                </div>
-              } />
             )}
 
             {/* Fallback route */}

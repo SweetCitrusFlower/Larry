@@ -36,7 +36,7 @@ def delete_user_submission(db: Session, db_submission: UserSubmission) -> UserSu
 def get_user_statistics(db: Session, user_id: int) -> dict:
     submissions = list(db.execute(select(UserSubmission).where(UserSubmission.user_id == user_id)).scalars().all())
     total = len(submissions)
-    successful = sum(1 for sub in submissions if sub.result_status == "Accepted")
+    successful = sum(1 for sub in submissions if sub.result_status == "accepted")
     failed = total - successful
     success_rate = (successful / total * 100) if total > 0 else 0.0
     return {
