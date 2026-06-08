@@ -3,9 +3,13 @@ from typing import Optional, List
 
 class DailyPlanBase(BaseModel):
     day_number: int
-    topics: str
-    theoretical_topic_content: str
+    title: str
+    concepts_to_cover: List[str]
+    difficulty: str
+    theoretical_topic_content: Optional[str] = None
     completion_status: bool = False
+    content_status: str = "PENDING"
+    recommended_problem_tags: Optional[List[str]] = None
 
 class DailyPlanCreate(DailyPlanBase):
     journey_id: int

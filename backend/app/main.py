@@ -2,15 +2,21 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from app.db.database import init_db
+# AICI ESTE SECRETUL: Importăm modelele ca SQLAlchemy să afle de existența lor!
+from app.models import user, journey
+
 from app.api.routers import api_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Acum când init_db() rulează, știe că trebuie să creeze tabelele din fișierele de mai sus
     init_db()
     yield
 
 app = FastAPI(title="AI Coding Coaching Platform", lifespan=lifespan)
+
 
 origins = [
     "http://localhost:5173",

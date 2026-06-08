@@ -20,13 +20,8 @@ const EditorPane = ({ language, code, setCode }) => {
   };
 
   return (
-    <div className="editor-pane">
-      <div className="pane-header">
-        <span className="file-tab active">
-          main.py
-        </span>
-      </div>
-      <div className="editor-container">
+    <div className="flex-1 flex flex-col w-full h-full min-h-0">
+      <div className="flex-1 relative min-h-0 w-full">
         <Editor
           height="100%"
           language={language}
@@ -38,12 +33,10 @@ const EditorPane = ({ language, code, setCode }) => {
             minimap: { enabled: false },
             scrollBeyondLastLine: false,
             automaticLayout: true,
-            padding: { top: 16 },
-            backgroundColor: '#0f172a'
+            padding: { top: 16 }
           }}
         />
       </div>
-
     </div>
   );
 };

@@ -6,7 +6,7 @@ async def extract_text_from_pdf(pdf_bytes: bytes) -> str:
     Sends raw PDF bytes to Vertex AI Gemini for multimodal extraction.
     """
     # Use environment variable with fallback
-    model_name = os.getenv("VERTEX_MODEL_NAME", "gemini-1.5-flash-preview-0409")
+    model_name = os.getenv("VERTEX_MODEL_NAME", "gemini-2.5-flash")
     model = GenerativeModel(model_name)
     
     # Load raw bytes as inline data

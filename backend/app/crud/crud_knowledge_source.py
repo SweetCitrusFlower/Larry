@@ -7,8 +7,8 @@ from app.schemas.knowledge_source import KnowledgeSourceCreate, KnowledgeSourceU
 def get_knowledge_source(db: Session, source_id: int) -> Optional[KnowledgeSource]:
     return db.execute(select(KnowledgeSource).where(KnowledgeSource.id == source_id)).scalar_one_or_none()
 
-def get_knowledge_sources(db: Session, skip: int = 0, limit: int = 100) -> List[KnowledgeSource]:
-    return list(db.execute(select(KnowledgeSource).offset(skip).limit(limit)).scalars().all())
+def get_knowledge_sources(db: Session, user_id: int, skip: int = 0, limit: int = 100) -> List[KnowledgeSource]:
+    return list(db.execute(select(KnowledgeSource).where(KnowledgeSource.user_id == user_id).offset(skip).limit(limit)).scalars().all())
 
 def create_knowledge_source(db: Session, source: KnowledgeSourceCreate) -> KnowledgeSource:
     db_source = KnowledgeSource(**source.model_dump())

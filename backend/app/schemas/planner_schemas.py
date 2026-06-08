@@ -17,6 +17,7 @@ class DailyPlanItem(BaseModel):
     difficulty: Literal["Beginner", "Intermediate", "Advanced"] = Field(..., description="The difficulty level of the material for this day.")
     theoretical_topic_content: str = Field(..., description="Comprehensive theoretical content explaining the concepts for the day. Use markdown.")
     task: TaskItem = Field(..., description="A practical coding task or exercise applying the day's concepts.")
+    recommended_problem_tags: List[str] = Field(..., description="Select up to 3 tags strictly from the provided unique tags list.")
 
 class JourneyRoadmap(BaseModel):
     """
