@@ -51,9 +51,9 @@ services:
       JUDGE0_API_URL: "http://judge0-server:2358"
       OLLAMA_BASE_URL: "http://ollama:11434"
       GOOGLE_APPLICATION_CREDENTIALS: "/tmp/adc.json"
-      GOOGLE_CLOUD_PROJECT: "project-43919676-77f2-42ed-8b8"
+      GOOGLE_CLOUD_PROJECT: "project-312c79e1-39c2-4342-8f9"
     volumes:
-      - c:/Users/minas/AppData/Roaming/gcloud/application_default_credentials.json:/tmp/adc.json:ro
+      - C:/Users/Alex/AppData/Roaming/gcloud/application_default_credentials.json:/tmp/adc.json:ro
     depends_on:
       - db
       - redis
@@ -74,7 +74,7 @@ services:
     volumes:
       - ./infrastructure/judge0/judge0.conf:/judge0.conf:ro
     ports:
-      - "2358:2358"
+      - "8358:2358"
     privileged: true
     restart: always
 

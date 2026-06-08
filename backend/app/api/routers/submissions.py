@@ -30,6 +30,7 @@ def _verify_user_can_access_task(db: Session, task_id: int, user_id: int):
 import asyncio
 import json
 from app.services.judge0 import execute_code
+from app.services import judge0_service
 
 @router.post("/", response_model=UserSubmissionResponse, status_code=status.HTTP_201_CREATED)
 async def create_new_submission(
@@ -77,6 +78,7 @@ async def create_new_submission(
         
         stdout_val = result.get("stdout")
         stderr_val = result.get("stderr") or result.get("compile_output")
+        compile_output_val = result.get("compile_output")
         time_val = result.get("time")
         mem_val = result.get("memory")
 
@@ -84,6 +86,7 @@ async def create_new_submission(
             result_status=result_status,
             stdout=str(stdout_val) if stdout_val is not None else None,
             stderr=str(stderr_val) if stderr_val is not None else None,
+            compile_output=str(compile_output_val) if compile_output_val is not None else None,
             execution_time=float(time_val) if time_val is not None else None,
             memory_usage=int(mem_val) if mem_val is not None else None
         )

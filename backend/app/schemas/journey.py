@@ -18,8 +18,6 @@ class DailyPlanResponse(BaseModel):
     title: str
     concepts_to_cover: List[str]
     difficulty: str
-    theoretical_topic_content: Optional[str] = None
-    tasks: List[TaskSchemaResponse] = []
     completion_status: bool = False
     model_config = ConfigDict(from_attributes=True)
     
@@ -46,8 +44,16 @@ class JourneyGenerateRequest(BaseModel):
     prompt: str
     target_days: int
 
-class JourneyDifficultyUpdate(BaseModel):
-    difficulty: str
+class JourneyCreate(BaseModel):
+    user_id: int
+    original_prompt: str
+    target_days: int
+    journey_title: Optional[str] = None
+    overview: Optional[str] = None
+
+class JourneyUpdate(BaseModel):
+    journey_title: Optional[str] = None
+    overview: Optional[str] = None
 
 class JourneyResponse(BaseModel):
     id: int
