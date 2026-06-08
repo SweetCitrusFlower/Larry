@@ -6,8 +6,13 @@ import RoadmapDisplay from './components/RoadmapDisplay';
 import AuthModal from './components/AuthModal';
 import Workspace from './components/Workspace';
 import Submissions from './components/Submissions';
-import { LogOut, Layout, BookOpen } from 'lucide-react';
+import { LogOut, Layout, BookOpen, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+import Editor from '@monaco-editor/react';
+import axios from 'axios';
+import FavoriteButton from './components/FavoriteButton';
+import FavoritesPanel from './components/FavoritesPanel';
 
 // A wrapper for the Dashboard (New Journey view)
 const Dashboard = () => {
@@ -38,6 +43,7 @@ const Dashboard = () => {
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(!isAuthenticated);
+  const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
 
   // Sync modal state if auth state changes
   useEffect(() => {
@@ -66,13 +72,22 @@ export default function App() {
 
         <div className="flex items-center gap-6">
           {isAuthenticated && (
-            <button 
-              onClick={handleLogout}
-              className="flex items-center gap-2 text-sm text-slate-400 hover:text-red-400 transition-colors"
-            >
-              <LogOut size={16} />
-              <span>Sign Out</span>
-            </button>
+            <>
+              <button 
+                onClick={() => setIsFavoritesOpen(true)}
+                className="flex items-center gap-2 text-sm text-yellow-400 hover:text-yellow-300 transition-colors"
+              >
+                <Star size={16} />
+                <span>Favorites</span>
+              </button>
+              <button 
+                onClick={handleLogout}
+                className="flex items-center gap-2 text-sm text-slate-400 hover:text-red-400 transition-colors"
+              >
+                <LogOut size={16} />
+                <span>Sign Out</span>
+              </button>
+            </>
           )}
         </div>
       </header>
@@ -123,6 +138,11 @@ export default function App() {
           setIsAuthenticated(true);
           setIsAuthModalOpen(false);
         }}
+      />
+      
+      <FavoritesPanel 
+        isOpen={isFavoritesOpen} 
+        onClose={() => setIsFavoritesOpen(false)} 
       />
     </div>
   );

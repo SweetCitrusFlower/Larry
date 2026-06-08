@@ -7,6 +7,9 @@ class UserSubmissionBase(BaseModel):
     language_id: Optional[int] = 71
     score: Optional[float] = None
     result_status: str
+    stdout: Optional[str] = None
+    stderr: Optional[str] = None
+    compile_output: Optional[str] = None
 
 class UserSubmissionCreate(UserSubmissionBase):
     user_id: int
@@ -19,6 +22,7 @@ class UserSubmissionUpdate(BaseModel):
     stderr: Optional[str] = None
     execution_time: Optional[float] = None
     memory_usage: Optional[int] = None
+    compile_output: Optional[str] = None
 
 class UserSubmissionResponse(UserSubmissionBase):
     id: int

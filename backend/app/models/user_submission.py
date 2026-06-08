@@ -24,6 +24,7 @@ class UserSubmission(Base):
     score: Mapped[Optional[float]] # e.g., percentage of test cases passed
     result_status: Mapped[str] # e.g., pending, accepted, wrong_answer, compile_error
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    compile_output: Mapped[Optional[str]]
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="submissions")
