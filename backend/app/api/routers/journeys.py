@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Response
+from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from datetime import datetime
@@ -10,38 +11,11 @@ from app.models.user import User
 from app.models.journey import Journey
 from app.models.daily_plan import DailyPlan
 from app.agents.master_planner import generate_roadmap
-from app.schemas.journey import JourneyResponse, JourneyGenerateRequest
+from app.schemas.journey import JourneyResponse, JourneyGenerateRequest, DailyPlanResponse
 
 router = APIRouter()
 
-# ── Response schemas ──────────────────────────────────────────────────────────
 
-class DailyPlanResponse(BaseModel):
-    id: int
-    journey_id: int
-    day_number: int
-    title: str
-    concepts_to_cover: List[str]
-    difficulty: str
-    completion_status: bool = False
-    model_config = ConfigDict(from_attributes=True)
-
-class JourneyResponse(BaseModel):
-    id: int
-    user_id: int
-    original_prompt: str
-    target_days: int
-    journey_title: Optional[str]
-    overview: Optional[str]
-    created_at: datetime
-    daily_plans: List[DailyPlanResponse] = []
-    model_config = ConfigDict(from_attributes=True)
-
-# ── Request schema ─────────────────────────────────────────────────────────────
-
-class JourneyGenerateRequest(BaseModel):
-    prompt: str
-    target_days: int
 
 # ── Endpoints ──────────────────────────────────────────────────────────────────
 
