@@ -94,6 +94,19 @@ const RoadmapDisplay = () => {
     }
   };
 
+  const handleDifficultyChange = async (newDifficulty) => {
+    try {
+      const res = await journeyAPI.updateDifficulty(journeyId, newDifficulty);
+      setRoadmap(res.data);
+      if (res.data.daily_plans) {
+        setPlans([...res.data.daily_plans].sort((a, b) => a.day_number - b.day_number));
+      }
+    } catch (e) {
+      console.error("Failed to update difficulty", e);
+      alert("Failed to update difficulty.");
+    }
+  };
+
   if (!roadmap) {
     return (
       <div className="flex h-full items-center justify-center text-slate-500 w-full">
@@ -180,15 +193,21 @@ const RoadmapDisplay = () => {
                   Day {plan.day_number}: {plan.title}
                 </h3>
                 <div className="flex items-center gap-2">
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                    plan.difficulty === 'Beginner'
-                      ? 'bg-green-500/15 text-green-400'
-                      : plan.difficulty === 'Intermediate'
-                      ? 'bg-yellow-500/15 text-yellow-400'
-                      : 'bg-red-500/15 text-red-400'
-                  }`}>
-                    {plan.difficulty}
-                  </span>
+                  <select 
+                    value={plan.difficulty} 
+                    onChange={(e) => handleDifficultyChange(e.target.value)}
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium outline-none cursor-pointer appearance-none ${
+                      plan.difficulty === 'Beginner'
+                        ? 'bg-green-500/15 text-green-400 border border-green-500/30'
+                        : plan.difficulty === 'Intermediate'
+                        ? 'bg-yellow-500/15 text-yellow-400 border border-yellow-500/30'
+                        : 'bg-red-500/15 text-red-400 border border-red-500/30'
+                    }`}
+                  >
+                    <option className="bg-slate-900 text-green-400" value="Beginner">Beginner</option>
+                    <option className="bg-slate-900 text-yellow-400" value="Intermediate">Intermediate</option>
+                    <option className="bg-slate-900 text-red-400" value="Advanced">Advanced</option>
+                  </select>
                   <Calendar size={16} className="text-slate-500" />
                 </div>
               </div>

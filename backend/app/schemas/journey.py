@@ -2,6 +2,15 @@ from pydantic import BaseModel, ConfigDict
 from typing import Optional, List
 from datetime import datetime
 
+class TaskSchemaResponse(BaseModel):
+    id: int
+    title: str
+    problem_id: str
+    description: str
+    starter_code: str
+    hidden_solution: str
+    model_config = ConfigDict(from_attributes=True)
+
 class DailyPlanResponse(BaseModel):
     id: int
     journey_id: int
@@ -9,11 +18,17 @@ class DailyPlanResponse(BaseModel):
     title: str
     concepts_to_cover: List[str]
     difficulty: str
+    theoretical_topic_content: Optional[str] = None
+    tasks: List[TaskSchemaResponse] = []
+    completion_status: bool = False
     model_config = ConfigDict(from_attributes=True)
 
 class JourneyGenerateRequest(BaseModel):
     prompt: str
     target_days: int
+
+class JourneyDifficultyUpdate(BaseModel):
+    difficulty: str
 
 class JourneyResponse(BaseModel):
     id: int

@@ -98,6 +98,7 @@ export default function App() {
                 } />
                 <Route path="/workspace/:dailyPlanId" element={<Workspace />} />
                 <Route path="/submissions" element={<Submissions />} />
+                <Route path="/statistics" element={<StatisticsDashboard />} />
               </>
             ) : (
               <Route path="/login" element={

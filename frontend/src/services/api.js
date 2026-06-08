@@ -80,6 +80,7 @@ export const journeyAPI = {
   generate: (prompt, targetDays) =>
     api.post('/journeys/generate', { prompt, target_days: targetDays }),
   exportPdf: (id) => api.get(`/journeys/${id}/export-pdf`, { responseType: 'blob' }),
+  updateDifficulty: (id, difficulty) => api.put(`/journeys/${id}/difficulty`, { difficulty }),
 };
 
 // ── Daily Plan API ────────────────────────────────────────────────────────────
@@ -107,7 +108,8 @@ export const submissionAPI = {
       result_status: 'pending'
     });
   },
-  getMySubmissions: (skip = 0, limit = 100) => api.get(`/submissions/user?skip=${skip}&limit=${limit}`)
+  getMySubmissions: (skip = 0, limit = 100) => api.get(`/submissions/user?skip=${skip}&limit=${limit}`),
+  getStatistics: () => api.get('/submissions/user/statistics')
 };
 
 // ── Knowledge Source API ────────────────────────────────────────────────────────
