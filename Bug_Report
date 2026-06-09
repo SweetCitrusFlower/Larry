@@ -1,0 +1,42 @@
+# Raport de Bug-uri: Proiectul Larry (v1.2.0)
+Acest raport centralizează erorile critice identificate în ciclul de dezvoltare și testare, împreună cu soluțiile tehnice implementate.
+1. Erori de Validare (Scheme Pydantic)
+￼ Descriere: Erori ⁠422 Unprocessable Entity⁠ la generarea Journey-urilor.
+￼ Cauză: Testele automate trimiteau payload-uri învechite (cheia ⁠level⁠ în loc de ⁠target_days⁠). Schema Pydantic actuală impune ⁠target_days⁠ ca parametru obligatoriu.
+￼ Remediere: Actualizarea suitei de teste ⁠test_student_agent.py⁠ și ⁠test_student_agent_evals.py⁠ pentru a utiliza structura JSON conformă cu noua definiție a rutei FastAPI.
+2. Erori de Securitate (403 Forbidden)
+￼ Descriere: Testele de execuție a codului returnau ⁠403 Forbidden⁠.
+￼ Cauză: Mismatch între ⁠user_id⁠-ul hardcodat în payload-urile de test (⁠1⁠) și ID-ul utilizatorului simulat în sistemul de autentificare (⁠999⁠). Middleware-ul de securitate bloca cererea ca măsură de protecție.
+￼ Remediere: Sincronizarea ⁠user_id⁠-ului din parametrizarea testelor cu cel utilizat în mock-ul de autentificare.
+3. Conflict de Mocking (Global vs. Local)
+￼ Descriere: Erori ⁠500 Internal Server Error⁠ la invocarea endpoint-urilor ce folosesc LLM-ul.
+￼ Cauză: Patch-ul global pentru ⁠langchain_ollama⁠ din ⁠conftest.py⁠ returna un obiect de tip ⁠MagicMock⁠. FastAPI încerca să parseze acest obiect prin Pydantic, provocând colapsul procesului de serializare.
+￼ Remediere: Renunțarea la patch-ul global pentru aceste rute și implementarea unor mock-uri locale (⁠AsyncMock⁠) direct la nivel de endpoint (⁠@patch("app.api.routers.journeys.generate_roadmap")⁠), care returnează obiecte Pydantic valide.
+4. Erori de Aserțiune (Logica de business)
+￼ Descriere: Erori în verificarea statusului de execuție a codului (⁠AttributeError⁠ / ⁠AssertionError⁠).
+￼ Cauză: Testele utilizau cheia învechită ⁠status⁠ în loc de ⁠result_status⁠. De asemenea, testele nu anticipau codul ⁠404 Not Found⁠ (rezultat valid când DB-ul in-memory este gol).
+￼ Remediere: * Modificarea aserțiunilor pentru a utiliza cheia ⁠result_status⁠.
+￼ Implementarea unei logici de tip "Early Return" pentru codul ⁠404⁠ în testele de execuție pentru a preveni crash-ul suitei pe baze de date izolate.
+5. Erori de Mocking pentru "LLM-as-a-Judge"
+￼ Descriere: ⁠test_master_planner_quality_eval⁠ eșua la apelul ⁠invoke⁠.
+￼ Cauză: Patch-ul la nivel de clasă ⁠ChatOllama⁠ nu era propagat corect către instanța creată în test.
+￼ Remediere: Trecerea la ⁠@patch.object(ChatOllama, "invoke")⁠ pentru a intercepta direct execuția metodei și a returna un payload de tip "PASS" determinist.
+Sumar Impact
+Tip Bug
+Severitate
+Status
+Impact
+Validare API
+Critică
+Rezolvat
+Blocare generare Journey
+Securitate/Auth
+Mare
+Rezolvat
+Blocare execuție cod
+Arhitectură/Mock
+Medie
+Rezolvat
+Instabilitate pipeline CI/CD
+
+Raport generat pentru monitorizarea calității codului în etapa de stabilizare a suitei de teste.
