@@ -12,26 +12,23 @@ This document serves as the official project architecture and documentation.
 
 The system is designed with a modern decoupled architecture, separating the client interface from the backend API, the AI orchestration layer, and the isolated code evaluation environment.
 
-### Sequence Diagram (Journey Generation)
 
 
-
-
-1. Hybrid LLM Architecture
+## 1. Hybrid LLM Architecture
 Larry uses a cost-effective and highly capable hybrid model strategy:
 
 Commercial APIs (e.g., Google Vertex AI / Gemini 2.5 Pro): Utilized by the Content Creator Agent for processing RAG contexts, generating comprehensive Markdown theory lessons, executing smart coding problem selections, and acting as the pedagogical Socratic Tutor.
 
 Local Open Source Models (e.g., Qwen 2.5 Coder via Ollama): Run locally via Docker to handle structured JSON outputs for the Master Planner, dramatically reducing API costs while maintaining top-tier coding context.
 
-2. Multi-Agent System (LangChain)
+## 2. Multi-Agent System (LangChain)
 Master Planner: Analyzes user prompts to generate a structural Journey with specific objectives and concepts spanning multiple days. Supports dynamic regeneration of the curriculum if the user changes the difficulty level.
 
 Content Creator: Asynchronously fetches RAG context from ChromaDB, generates the theoretical theoretical_topic_content, and curates specific coding Tasks. It uniquely saves the exact fetched vector chunks into the rag_context_payload database column for later downstream use.
 
 Socratic Tutor: Acts as a conversational sidekick. It inherits the exact rag_context_payload from the lesson to maintain terminological consistency and relies on strict internal Regex Guardrails to ensure it guides the user via questions rather than leaking code.
 
-💻 Technology Stack
+## 💻 Technology Stack
 The platform leverages a modern, decoupled stack tailored for high performance, AI orchestration, and secure code execution:
 
 Frontend (UI & Editor): Built with React (Vite) and Tailwind CSS for a fast, responsive user interface. It integrates @monaco-editor/react to deliver a professional, in-browser code editor experience.
@@ -48,7 +45,7 @@ AI Orchestration: LangChain forms the backbone of our Multi-Agent System, seamle
 
 Isolated Code Execution: Judge0 is integrated as a secure, sandboxed engine to safely compile, run, and evaluate user-submitted code (Python, C++, JS) against hidden test cases.
 
-🚀 Key Features
+## 🚀 Key Features
 Dynamic Curriculum Generation: AI instantly designs a multi-day coding roadmap.
 
 Adaptive Difficulty: Users can change the difficulty level (Beginner/Intermediate/Advanced) of a journey on-the-fly, triggering the Master Planner to rewrite the curriculum while preserving pedagogical coherency.
@@ -88,7 +85,7 @@ Larry/
 └── docker-compose.yml       # Orchestration for PostgreSQL, ChromaDB, Redis, Ollama, Judge0
 
 
-🔄 Database Migrations (Alembic)
+## 🔄 Database Migrations (Alembic)
 The project uses Alembic to handle schema changes. It is fully integrated with our SQLAlchemy 2.0 models and automatically resolves the database URL.
 
 All migration commands must be run from inside the backend/ directory with the virtual environment activated:
@@ -99,7 +96,8 @@ alembic revision --autogenerate -m "description_of_changes"
 
 # 2. Apply the migration to the database
 alembic upgrade head
-🧠 RAG Ingestion Pipeline (Vertex AI)
+
+## 🧠 RAG Ingestion Pipeline (Vertex AI)
 The core RAG (Retrieval-Augmented Generation) ingestion module has been fully implemented. It processes uploaded PDFs asynchronously without blocking the FastAPI event loop.
 
 Native Vision Extraction: Uses the google-cloud-aiplatform SDK to send raw PDF bytes to Gemini as inline multimodal data, enforcing strict Markdown output with detailed visual descriptions.
@@ -108,7 +106,7 @@ Smart Chunking: LangChain's MarkdownHeaderTextSplitter semantically segments the
 
 Vector Storage: Uses Google's Vertex Embeddings (gemini-embedding-001) to embed the chunks and stores them in our Dockerized ChromaDB instance (larry_knowledge_base collection).
 
-🧪 Testing & CI/CD Pipeline
+## 🧪 Testing & CI/CD Pipeline
 The backend features a highly robust, fully deterministic testing suite tailored for CI/CD environments.
 
 GitHub Actions CI/CD: A .github/workflows/tests.yml pipeline runs automatically on all pushes and Pull Requests. The environment is fully isolated, mocking all external HTTP connections to ensure rapid and predictable test builds.
@@ -119,7 +117,7 @@ End-to-End (E2E) Simulated Student: An autonomous testing agent (SimulatedStuden
 
 Comprehensive Mocking: External services (Judge0 via httpx, ChromaDB, Vertex AI, and Ollama) are heavily patched using unittest.mock and respx to ensure the CI pipeline requires zero live API credits and avoids network latency issues.
 
-✅ Current Status
+## ✅ Current Status
 The core platform is fully operational and functional:
 
 AI Agents: Master Planner (Ollama/Qwen2.5), Content Creator (Vertex AI), and the Socratic Tutor are fully implemented, sharing persistent context via the database.
@@ -130,7 +128,7 @@ Code Execution Integration: Judge0 is fully connected and rigorously tested via 
 
 Frontend UI Expanded: The React dashboard now visualizes Journeys via RoadmapDisplay, supports the Monaco Code Editor Workspace featuring the contextual "💡 Ask Larry" button, and aggregates user metrics in the StatisticsDashboard.
 
-🔬 Active Research & Future Modules (Development Branches)
+## 🔬 Active Research & Future Modules (Development Branches)
 As part of the continuous evolution of the platform (and serving as modular extensions for academic evaluation), several auxiliary features are currently developed and maintained in isolated Git branches:
 
 Persistent Knowledge Management (favorite_list branch): Implements an end-to-end Bookmarks and Favorites system. This extension allows users to persistently save specific AI chat explanations, theoretical snippets, and coding problems into a dedicated SQLAlchemy model, enhancing the pedagogical retention of the platform.
