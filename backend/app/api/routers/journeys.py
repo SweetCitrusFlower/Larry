@@ -5,7 +5,6 @@ from typing import List, Optional
 from datetime import datetime
 from app.db.database import get_db
 import markdown
-import weasyprint
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.models.journey import Journey
@@ -127,6 +126,7 @@ def export_journey_pdf(
     """
     Export all completed theoretical lessons for a Journey to a PDF.
     """
+    import weasyprint
     # Fetch journey and order daily plans by day_number
     stmt = (
         select(Journey)
