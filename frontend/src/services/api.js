@@ -124,6 +124,12 @@ export const favoritesAPI = {
   removeFavorite: (id) => api.delete(`/favorites/${id}`)
 };
 
+// ── Hints API (Idle Assistance) ────────────────────────────────────────────────
+export const hintsAPI = {
+  generateHint: (request) => api.post('/hints/generate-hint', request),
+  dismissHint: (hintId) => api.patch(`/hints/dismiss-hint/${hintId}`)
+};
+
 export const journeysAPI = {
   getJourneys: () => api.get('/journeys/'),
   getJourney: (id) => api.get(`/journeys/${id}`),

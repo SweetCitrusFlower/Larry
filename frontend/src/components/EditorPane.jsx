@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import Editor from '@monaco-editor/react';
 import useFrustrationDetector from '../hooks/useFrustrationDetector';
+import useEditorActivity from '../hooks/useEditorActivity';
 
-const EditorPane = ({ language, code, setCode }) => {
+const EditorPane = ({ language, code, setCode, onActivityDetected = null }) => {
   const trackChange = useFrustrationDetector({
     lineThreshold: 10,
     timeWindowMs: 60000,
@@ -14,10 +15,17 @@ const EditorPane = ({ language, code, setCode }) => {
     }
   });
 
-  const handleChange = (value) => {
+  // Track editor activity for idle assistance
+  const { handleEditorActivity } = useEditorActivity(
+    240000, // 4 minutes
+    onActivityDetected // Callback when idle threshold is reached
+  );
+
+  const handleChange = useCallback((value) => {
     setCode(value);
     trackChange(value);
-  };
+    handleEditorActivity(); // Track this activity
+  }, [setCode, trackChange, handleEditorActivity]);
 
   return (
     <div className="flex-1 flex flex-col w-full h-full min-h-0">

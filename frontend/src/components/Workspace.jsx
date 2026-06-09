@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import EditorPane from './EditorPane';
 import ConsolePane from './ConsolePane';
-import { taskAPI, submissionAPI, dailyPlanAPI, chatAPI } from '../services/api';
+import { taskAPI, submissionAPI, dailyPlanAPI, chatAPI, hintsAPI } from '../services/api';
 import { ArrowLeft, Loader2, Send, Lightbulb } from 'lucide-react';
+import IdleAssistanceNotification from './IdleAssistanceNotification';
 import { useParams, useNavigate } from 'react-router-dom';
 
 const Workspace = () => {
@@ -17,6 +18,11 @@ const Workspace = () => {
   const [hintLoading, setHintLoading] = useState(false);
   const [output, setOutput] = useState('');
   const [input, setInput] = useState('');
+
+  // Idle assistance state
+  const [idleNotificationVisible, setIdleNotificationVisible] = useState(false);
+  const [hintText, setHintText] = useState('');
+  const [currentHintId, setCurrentHintId] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -79,6 +85,47 @@ const Workspace = () => {
     } finally {
       setHintLoading(false);
     }
+  }
+  /**
+   * Called when user has been idle for 4 minutes
+   * Fetches a context-aware hint from the backend
+   */
+  const handleIdleDetected = useCallback(async () => {
+    if (!task) return;
+    
+    setIdleNotificationVisible(true);
+    setHintLoading(true);
+    setHintText('');
+    
+    try {
+      const response = await hintsAPI.generateHint({
+        task_id: task.id,
+        user_id: localStorage.getItem('userId'), // Assume userId is stored
+        current_code: code
+      });
+      
+      setHintText(response.data.hint_text);
+      setCurrentHintId(response.data.id);
+    } catch (e) {
+      console.error("Failed to fetch hint:", e);
+      setHintText("I wasn't able to generate a hint right now. Try reviewing the concepts or the problem description!");
+    } finally {
+      setHintLoading(false);
+    }
+  }, [task, code]);
+
+  const handleDismissHint = async () => {
+    if (currentHintId) {
+      try {
+        await hintsAPI.dismissHint(currentHintId);
+      } catch (e) {
+        console.error("Failed to dismiss hint:", e);
+      }
+    }
+  };
+
+  const handleCloseNotification = () => {
+    setIdleNotificationVisible(false);
   };
 
   if (loading || !dailyPlan) {
@@ -156,7 +203,12 @@ const Workspace = () => {
                </div>
             </div>
             <div className="flex-1 min-h-0">
-               <EditorPane language="python" code={code} setCode={setCode} />
+               <EditorPane 
+                 language="python" 
+                 code={code} 
+                 setCode={setCode}
+                 onActivityDetected={handleIdleDetected}
+               />
             </div>
          </div>
          
@@ -166,6 +218,15 @@ const Workspace = () => {
          </div>
          
       </div>
+
+      {/* Idle Assistance Notification */}
+      <IdleAssistanceNotification
+        isVisible={idleNotificationVisible}
+        hint={hintText}
+        loading={hintLoading}
+        onDismiss={handleDismissHint}
+        onClose={handleCloseNotification}
+      />
     </div>
   );
 };

@@ -125,3 +125,4 @@ langchain-ollama
 langchain-chroma
 markdown
 weasyprint
+datasets
