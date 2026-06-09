@@ -1,8 +1,8 @@
 # Larry: AI Coding Coaching Platform
 
-**Version:** 1.1.0
+**Version:** 1.2.0
 
-Larry is a next-generation, web-based AI Coding Coaching platform. Designed from scratch using a Multi-Agent System (MAS) and Retrieval-Augmented Generation (RAG), Larry provides users with personalized learning journeys, dynamic curriculum generation, and an isolated, real-time code execution environment. 
+Larry is a next-generation, web-based AI Coding Coaching platform. Designed from scratch using a Multi-Agent System (MAS) and Retrieval-Augmented Generation (RAG), Larry provides users with personalized learning journeys, dynamic curriculum generation, an isolated, real-time code execution environment, and a fully context-aware Socratic Tutor.
 
 This document serves as the official project architecture and documentation.
 
@@ -36,11 +36,8 @@ sequenceDiagram
     B-->>N: 200 OK + Datele Roadmap-ului
     N-->>F: Forward răspuns
     F-->>U: Randează interfața cu Roadmap-ul
-```
 
-### Container Architecture
 
-```mermaid
 graph TD
     User((Utilizator / Browser))
     
@@ -65,11 +62,7 @@ graph TD
     
     classDef ai fill:#f9d0c4,stroke:#333,stroke-width:2px;
     class Ollama ai;
-```
 
-### Entity-Relationship Diagram 
-
-```mermaid
 erDiagram
     USER ||--o{ JOURNEY : "creează"
     JOURNEY ||--|{ DAILY_PLAN : "conține"
@@ -92,6 +85,7 @@ erDiagram
         json concepts_to_cover
         string difficulty
         string theoretical_topic_content
+        string rag_context_payload
         bool completion_status
         int journey_id FK
     }
@@ -105,49 +99,36 @@ erDiagram
         int task_id FK
         int user_id FK
     }
-```
 
-### 1. Hybrid LLM Architecture
+1. Hybrid LLM Architecture
 Larry uses a cost-effective and highly capable hybrid model strategy:
-- **Commercial APIs (e.g., Google Vertex AI / Gemini 2.5 Pro):** Utilized by the Content Creator Agent for processing RAG contexts, generating comprehensive Markdown theory lessons, and executing smart coding problem selections.
-- **Local Open Source Models (e.g., Qwen 2.5 Coder via Ollama):** Run locally via Docker to handle structured JSON outputs for the Master Planner, dramatically reducing API costs while maintaining top-tier coding context.
 
-### 2. Multi-Agent System (LangChain)
-- **Master Planner:** Analyzes user prompts to generate a structural `Journey` with specific `objectives` and concepts spanning multiple days. Supports dynamic regeneration of the curriculum if the user changes the difficulty level.
-- **Content Creator:** Asynchronously fetches RAG context from ChromaDB and generates the theoretical `theoretical_topic_content` and curates specific coding `Tasks` (problems) matching the concepts of the `DailyPlan`.
-- **Socratic Tutor:** Acts as a conversational sidekick, reading user submissions and guiding them toward solutions without giving away direct answers.
+Commercial APIs (e.g., Google Vertex AI / Gemini 2.5 Pro): Utilized by the Content Creator Agent for processing RAG contexts, generating comprehensive Markdown theory lessons, executing smart coding problem selections, and acting as the pedagogical Socratic Tutor.
 
----
+Local Open Source Models (e.g., Qwen 2.5 Coder via Ollama): Run locally via Docker to handle structured JSON outputs for the Master Planner, dramatically reducing API costs while maintaining top-tier coding context.
 
-## 💻 Technology Stack
+2. Multi-Agent System (LangChain)
+Master Planner: Analyzes user prompts to generate a structural Journey with specific objectives and concepts spanning multiple days. Supports dynamic regeneration of the curriculum if the user changes the difficulty level.
 
-| Component | Technology | Description |
-| :--- | :--- | :--- |
-| **Frontend** | React (Vite) + Tailwind | UI layer, leveraging `@monaco-editor/react` for the code editor interface. |
-| **Backend API** | FastAPI (Python) | High-performance asynchronous REST framework. |
-| **ORM & DB** | SQLAlchemy 2.0 | Modern database interaction utilizing `Mapped` and `mapped_column` paradigms. |
-| **Relational DB** | PostgreSQL | Primary datastore mapped to port 5440 via Docker Compose. |
-| **Vector DB** | ChromaDB | Local vector store for the RAG pipeline to index books/courses. |
-| **Caching/Queue** | Redis | To be used for task queues and rapid state caching. |
-| **AI Orchestration** | LangChain | Managing agent states, prompts, and vector database interactions. |
-| **Code Execution** | Judge0 | Secure, sandboxed code execution engine integrated for evaluating submissions. |
+Content Creator: Asynchronously fetches RAG context from ChromaDB, generates the theoretical theoretical_topic_content, and curates specific coding Tasks. It uniquely saves the exact fetched vector chunks into the rag_context_payload database column for later downstream use.
 
----
+Socratic Tutor: Acts as a conversational sidekick. It inherits the exact rag_context_payload from the lesson to maintain terminological consistency and relies on strict internal Regex Guardrails to ensure it guides the user via questions rather than leaking code.
 
-## 🚀 Key Features
+🚀 Key Features
+Dynamic Curriculum Generation: AI instantly designs a multi-day coding roadmap.
 
-1. **Dynamic Curriculum Generation**: AI instantly designs a multi-day coding roadmap.
-2. **Adaptive Difficulty**: Users can change the difficulty level (Beginner/Intermediate/Advanced) of a journey on-the-fly, triggering the Master Planner to rewrite the curriculum while preserving pedagogical coherency.
-3. **In-Browser IDE & Code Execution**: Monaco Editor integrated with a Judge0 backend pipeline allowing users to run Python/C++/JS code against hidden test cases.
-4. **Statistics Dashboard**: Visual progress tracking and success rates based on Judge0 "Accepted" submissions vs "Failed" attempts.
-5. **PDF Lesson Export**: Automatically compile generated Markdown lessons into premium PDF documents using WeasyPrint for offline reading.
-6. **RAG-Powered Content**: Theoretical lessons are generated by synthesizing uploaded course materials via Vector Similarity Search (ChromaDB + Vertex AI Embeddings).
+Adaptive Difficulty: Users can change the difficulty level (Beginner/Intermediate/Advanced) of a journey on-the-fly, triggering the Master Planner to rewrite the curriculum while preserving pedagogical coherency.
 
----
+In-Browser IDE & Code Execution: Monaco Editor integrated with a Judge0 backend pipeline allowing users to run Python/C++/JS code against hidden test cases.
 
-## 📂 Project Structure
+Socratic Tutor & Pedagogical Guardrails: The frontend features a "💡 Ask Larry" button directly within the Workspace. When stuck, users receive targeted hints that utilize the exact terminology from their generated lesson (rag_context_payload). A strict backend Regex Guardrail intercepts all LLM responses, automatically blocking any markdown/inline code or functional signatures to enforce pedagogical integrity.
 
-```text
+Statistics Dashboard: Visual progress tracking and success rates based on Judge0 "Accepted" submissions vs "Failed" attempts.
+
+PDF Lesson Export: Automatically compile generated Markdown lessons into premium PDF documents using WeasyPrint for offline reading.
+
+RAG-Powered Content: Theoretical lessons are generated by synthesizing uploaded course materials via Vector Similarity Search (ChromaDB + Vertex AI Embeddings).
+
 Larry/
 ├── backend/
 │   ├── app/
@@ -158,7 +139,7 @@ Larry/
 │   │   ├── db/              # SQLAlchemy session and initialization
 │   │   ├── models/          # SQLAlchemy 2.0 ORM Entities
 │   │   ├── schemas/         # Pydantic v2 Data Validation models
-│   │   └── services/        # RAG pipeline, Judge0 execution, PDF generation
+│   │   └── services/        # Socratic Tutor, Judge0 execution, PDF generation
 │   ├── main.py              # FastAPI application entry point
 │   └── requirements.txt     # Python dependencies
 ├── frontend/                # React (Vite) Client Application
@@ -171,76 +152,65 @@ Larry/
 ├── infrastructure/
 │   └── judge0/              # Configuration for Judge0 isolation
 └── docker-compose.yml       # Orchestration for PostgreSQL, ChromaDB, Redis, Ollama, Judge0
-```
 
----
+🔄 Database Migrations (Alembic)
+The project uses Alembic to handle schema changes. It is fully integrated with our SQLAlchemy 2.0 models and automatically resolves the database URL.
 
-## 🔄 Database Migrations (Alembic)
+All migration commands must be run from inside the backend/ directory with the virtual environment activated:
 
-The project uses [Alembic](https://alembic.sqlalchemy.org/) to handle schema changes. It is fully integrated with our SQLAlchemy 2.0 models and automatically resolves the database URL.
-
-All migration commands must be run from inside the `backend/` directory with the virtual environment activated:
-
-```bash
+Bash
 # 1. Generate a new migration script automatically after changing models in app/models/
 alembic revision --autogenerate -m "description_of_changes"
 
 # 2. Apply the migration to the database
 alembic upgrade head
-```
 
----
+## 💻 Technology Stack
 
-## 🧠 RAG Ingestion Pipeline (Vertex AI)
+The platform leverages a modern, decoupled stack tailored for high performance, AI orchestration, and secure code execution:
 
+* **Frontend (UI & Editor):** Built with **React (Vite)** and **Tailwind CSS** for a fast, responsive user interface. It integrates `@monaco-editor/react` to deliver a professional, in-browser code editor experience.
+* **Backend API:** Powered by **FastAPI (Python)**, providing a robust and highly performant asynchronous REST framework.
+* **Database & ORM:** Uses **PostgreSQL** (containerized via Docker Compose on port 5440) as the primary relational database, interacting natively through **SQLAlchemy 2.0**'s modern `Mapped` and `mapped_column` paradigms.
+* **Vector Database (RAG):** **ChromaDB** runs locally to embed and index textbooks and courses, fueling the platform's Retrieval-Augmented Generation pipeline.
+* **Caching & Queues:** **Redis** is implemented to handle rapid state caching and manage background task queues.
+* **AI Orchestration:** **LangChain** forms the backbone of our Multi-Agent System, seamlessly managing state transitions, system prompts, and vector search operations.
+* **Isolated Code Execution:** **Judge0** is integrated as a secure, sandboxed engine to safely compile, run, and evaluate user-submitted code (Python, C++, JS) against hidden test cases.
+
+🧠 RAG Ingestion Pipeline (Vertex AI)
 The core RAG (Retrieval-Augmented Generation) ingestion module has been fully implemented. It processes uploaded PDFs asynchronously without blocking the FastAPI event loop.
 
-- **Native Vision Extraction**: Uses the `google-cloud-aiplatform` SDK to send raw PDF bytes to Gemini as inline multimodal data, enforcing strict Markdown output with detailed visual descriptions.
-- **Smart Chunking**: LangChain's `MarkdownHeaderTextSplitter` semantically segments the text while preserving structural header context in the metadata.
-- **Vector Storage**: Uses Google's Vertex Embeddings (`gemini-embedding-001`) to embed the chunks and stores them in our Dockerized ChromaDB instance (`larry_knowledge_base` collection).
+Native Vision Extraction: Uses the google-cloud-aiplatform SDK to send raw PDF bytes to Gemini as inline multimodal data, enforcing strict Markdown output with detailed visual descriptions.
 
-**Google Cloud Setup Requirement:**
-To run the RAG pipeline locally, you must authenticate with Google Cloud using Application Default Credentials (ADC):
-```bash
-gcloud auth application-default login
-gcloud config set project [YOUR_GCP_PROJECT_ID]
-```
+Smart Chunking: LangChain's MarkdownHeaderTextSplitter semantically segments the text while preserving structural header context in the metadata.
 
----
+Vector Storage: Uses Google's Vertex Embeddings (gemini-embedding-001) to embed the chunks and stores them in our Dockerized ChromaDB instance (larry_knowledge_base collection).
 
-## 🧪 Testing & CI/CD Pipeline
+🧪 Testing & CI/CD Pipeline
+The backend features a highly robust, fully deterministic testing suite tailored for CI/CD environments.
 
-The backend features a robust testing suite using `pytest` and `pytest-asyncio` with coverage tracking.
+GitHub Actions CI/CD: A .github/workflows/tests.yml pipeline runs automatically on all pushes and Pull Requests. The environment is fully isolated, mocking all external HTTP connections to ensure rapid and predictable test builds.
 
-- **GitHub Actions**: A `.github/workflows/tests.yml` pipeline runs automatically on all pushes and Pull Requests to the `main` branch.
-- **LLM-as-a-Judge**: We use an advanced "Golden Dataset" strategy inside `tests/agents/test_agent_evals.py` to probabilistically evaluate the AI agents.
-- **Mocking Strategy**: External services like Judge0 and Vertex AI are heavily mocked during CI to ensure deterministic tests and fast execution.
+LLM-as-a-Judge & Agent Evals: We use an advanced "Golden Dataset" strategy inside tests/agents/test_agent_evals.py to probabilistically evaluate AI agents. It programmatically asserts Pydantic structures for the Master Planner and validates the fallback logic of the Tutor's Regex Guardrails.
 
----
+End-to-End (E2E) Simulated Student: An autonomous testing agent (SimulatedStudentCoder) generates multiple types of code ("perfect", "syntax_error", "infinite_loop") to aggressively stress-test the Judge0 submission pipeline, accurately parsing network timeouts and compilation errors safely.
 
-## ✅ Current Status
+Comprehensive Mocking: External services (Judge0 via httpx, ChromaDB, Vertex AI, and Ollama) are heavily patched using unittest.mock and respx to ensure the CI pipeline requires zero live API credits and avoids network latency issues.
 
+✅ Current Status
 The core platform is fully operational and functional:
 
-- **AI Agents**: Master Planner (Ollama/Qwen2.5) and Content Creator (Vertex AI) are fully implemented and integrated into the workflow.
-- **Code Execution Integration**: Judge0 is fully connected. The `UserSubmission` endpoints evaluate actual code against hidden test cases and return robust execution metadata.
-- **Frontend UI Expanded**: The React dashboard now visualizes Journeys via `RoadmapDisplay`, supports the Monaco Code Editor Workspace, provides a Socratic Tutor chat interface, and aggregates user metrics in the new `StatisticsDashboard`.
-- **Advanced Features**: Users can change curriculum difficulty dynamically, export progress to PDF, and review execution history natively.
+AI Agents: Master Planner (Ollama/Qwen2.5), Content Creator (Vertex AI), and the Socratic Tutor are fully implemented, sharing persistent context via the database.
 
----
+Pedagogical Guardrails: The system successfully prevents LLM code-leakage natively via robust regex interception middlewares.
 
-## 🔬 Active Research & Future Modules (Development Branches)
+Code Execution Integration: Judge0 is fully connected and rigorously tested via the Simulated Student. The UserSubmission endpoints evaluate actual code against hidden test cases.
 
-As part of the continuous evolution of the platform (and serving as modular extensions for academic evaluation), several auxiliary features are currently developed and maintained in isolated Git branches. These modules represent the next phase of the platform's architectural expansion:
+Frontend UI Expanded: The React dashboard now visualizes Journeys via RoadmapDisplay, supports the Monaco Code Editor Workspace featuring the contextual "💡 Ask Larry" button, and aggregates user metrics in the StatisticsDashboard.
 
-- **Automated AI Evaluation & Simulated Student (`agent_student` & `teste_automate` branches):** 
-  Introduces an autonomous "Simulated Student Agent" that programmatically interacts with the Master Planner and Judge0 environments. This branch pioneers an *LLM-as-a-Judge* architecture to probabilistically evaluate the quality of AI-generated curriculums against a "Golden Dataset", serving as an advanced automated QA pipeline.
+🔬 Active Research & Future Modules (Development Branches)
+As part of the continuous evolution of the platform (and serving as modular extensions for academic evaluation), several auxiliary features are currently developed and maintained in isolated Git branches.
 
-- **Persistent Knowledge Management (`favorite_list` branch):** 
-  Implements an end-to-end Bookmarks and Favorites system. This extension allows users to persistently save specific AI chat explanations, theoretical snippets, and coding problems into a dedicated SQLAlchemy model, enhancing the pedagogical retention of the platform.
+Persistent Knowledge Management (favorite_list branch): Implements an end-to-end Bookmarks and Favorites system. This extension allows users to persistently save specific AI chat explanations, theoretical snippets, and coding problems into a dedicated SQLAlchemy model, enhancing the pedagogical retention of the platform.
 
-- **Interactive User Onboarding (`feature/first-time-user-tour` branch):** 
-  A frontend-driven module aimed at User Experience (UX) optimization. It provides an interactive, state-driven tour of the IDE, introducing new users to the multi-pane layout, the Socratic Tutor, and the code execution capabilities.
-
-- **Socratic Tutor Refinement (`socratic_tutor` branch):** 
-  Contains specialized prompt engineering and state-management updates for the conversational AI, ensuring it strictly adheres to pedagogical frameworks (guiding the student through questions rather than providing direct code solutions).
+Interactive User Onboarding (feature/first-time-user-tour branch): A frontend-driven module aimed at User Experience (UX) optimization. It provides an interactive, state-driven tour of the IDE, introducing new users to the multi-pane layout, the Socratic Tutor, and the code execution capabilities.
