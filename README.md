@@ -11,7 +11,7 @@ This document serves as the official project architecture and documentation.
 ## 🏗 Architecture Overview
 
 The system is designed with a modern decoupled architecture, separating the client interface from the backend API, the AI orchestration layer, and the isolated code evaluation environment.
-
+# Sequence Diagram (Journey Generation)
 ```mermaid
 sequenceDiagram
     autonumber
@@ -37,7 +37,7 @@ sequenceDiagram
     F-->>U: Randeaza interfata grafic
 
 ```
-
+# Container Architecture
 ```mermaid
 graph TD
     User((Utilizator Browser))
@@ -65,6 +65,7 @@ graph TD
     class Ollama ai;
 ```
 
+# Entity-Relationship Diagram (ERD)
 ```mermaid
 erDiagram
     USER ||--o{ JOURNEY : creates
