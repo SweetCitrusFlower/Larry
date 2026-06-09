@@ -71,21 +71,29 @@ services:
   judge0-server:
     image: judge0/judge0:1.13.1
     container_name: judge0-server
+    env_file: ./infrastructure/judge0/judge0.conf
     volumes:
       - ./infrastructure/judge0/judge0.conf:/judge0.conf:ro
     ports:
       - "8358:2358"
     privileged: true
+    depends_on:
+      - judge0-db
+      - judge0-redis
     restart: always
 
   judge0-worker:
     image: judge0/judge0:1.13.1
     container_name: judge0-worker
+    env_file: ./infrastructure/judge0/judge0.conf
     command: ["bash", "-c", "echo 'root ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && ./scripts/workers"]
     volumes:
       - ./infrastructure/judge0/judge0.conf:/judge0.conf:ro
     privileged: true
     user: "root"
+    depends_on:
+      - judge0-db
+      - judge0-redis
     restart: always
 
   judge0-db:

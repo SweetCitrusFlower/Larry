@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Calendar, Circle, Loader2, Play, Download, CheckCircle2, Check } from 'lucide-react';
 import { dailyPlanAPI, journeyAPI } from '../services/api';
 import { useParams, useNavigate } from 'react-router-dom';
+import { autopilotBus } from '../context/AutopilotContext';
 
 const RoadmapDisplay = () => {
   const [roadmap, setRoadmap] = useState(null);
@@ -31,6 +32,13 @@ const RoadmapDisplay = () => {
     if (journeyId) {
       fetchJourney();
     }
+    
+    const onModified = () => {
+      fetchJourney();
+    };
+    
+    const unsub = autopilotBus.on('JOURNEY_MODIFIED', onModified);
+    return () => unsub();
   }, [journeyId]);
 
   const handleGenerate = async (planId) => {
@@ -174,7 +182,7 @@ const RoadmapDisplay = () => {
             </div>
 
             {/* Card */}
-            <div className="glass-card p-5 flex-1 hover:border-slate-700 transition-colors mb-2">
+            <div className="ghost-daily-plan glass-card p-5 flex-1 hover:border-slate-700 transition-colors mb-2">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-semibold text-lg text-white">
                   Day {plan.day_number}: {plan.title}
@@ -213,14 +221,14 @@ const RoadmapDisplay = () => {
                   <>
                     <button 
                       onClick={() => handleStartLesson(plan)} 
-                      className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2"
+                      className="ghost-start-lesson-btn bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2"
                     >
                       <Play size={16} /> Start Lesson
                     </button>
                     {plan.completion_status ? (
                       <button 
                         disabled 
-                        className="bg-green-500/20 text-green-400 border border-green-500/30 px-5 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 cursor-default"
+                        className="ghost-completed-btn bg-green-500/20 text-green-400 border border-green-500/30 px-5 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 cursor-default"
                       >
                         <CheckCircle2 size={16} /> Completed
                       </button>
@@ -242,7 +250,7 @@ const RoadmapDisplay = () => {
                 ) : (
                   <button 
                     onClick={() => handleGenerate(plan.id)} 
-                    className="bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-5 py-2 rounded-lg text-sm font-semibold transition-colors"
+                    className="ghost-generate-lesson-btn bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-5 py-2 rounded-lg text-sm font-semibold transition-colors"
                   >
                     Generate Lesson
                   </button>

@@ -7,6 +7,7 @@ from app.db.database import Base
 if TYPE_CHECKING:
     from app.models.daily_plan import DailyPlan
     from app.models.user import User
+    from app.models.journey import Journey
 
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
@@ -14,6 +15,7 @@ class ChatMessage(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     # Linked to a daily plan (specific context) or a user session (general)
     daily_plan_id: Mapped[Optional[int]] = mapped_column(ForeignKey("daily_plans.id"), nullable=True)
+    journey_id: Mapped[Optional[int]] = mapped_column(ForeignKey("journeys.id", ondelete="CASCADE"), nullable=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     
     role: Mapped[str] = mapped_column(String(20)) # "user", "assistant", "system"
@@ -22,4 +24,5 @@ class ChatMessage(Base):
 
     # Relationships
     daily_plan: Mapped[Optional["DailyPlan"]] = relationship()
+    journey: Mapped[Optional["Journey"]] = relationship()
     user: Mapped["User"] = relationship()

@@ -13,6 +13,18 @@ from app.api.routers import api_router
 async def lifespan(app: FastAPI):
     # Acum când init_db() rulează, știe că trebuie să creeze tabelele din fișierele de mai sus
     init_db()
+    
+    # Seed the Demo Student User for the Autonomous Student Demo
+    from app.db.database import SessionLocal
+    from app.crud.crud_user import get_user_by_email, create_user
+    from app.schemas.user import UserCreate
+    
+    with SessionLocal() as db:
+        demo_email = "demo_student@aicoach.com"
+        if not get_user_by_email(db, email=demo_email):
+            print("Seeding Demo Student user...")
+            create_user(db, user=UserCreate(email=demo_email, password="demopassword123"))
+    
     yield
 
 app = FastAPI(title="AI Coding Coaching Platform", lifespan=lifespan)

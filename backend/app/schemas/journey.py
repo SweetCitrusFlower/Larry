@@ -16,6 +16,9 @@ class JourneyGenerateRequest(BaseModel):
     prompt: str
     target_days: int
 
+class JourneyModifyRequest(BaseModel):
+    prompt: str
+
 class JourneyCreate(BaseModel):
     user_id: int
     original_prompt: str

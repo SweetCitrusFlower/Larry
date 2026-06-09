@@ -6,8 +6,13 @@ from app.schemas.chat_message import ChatMessageCreate
 def get_chat_message(db: Session, message_id: int) -> Optional[ChatMessage]:
     return db.query(ChatMessage).filter(ChatMessage.id == message_id).first()
 
-def get_chat_messages_by_user(db: Session, user_id: int, skip: int = 0, limit: int = 100) -> List[ChatMessage]:
-    return db.query(ChatMessage).filter(ChatMessage.user_id == user_id).order_by(ChatMessage.timestamp.asc()).offset(skip).limit(limit).all()
+def get_chat_messages_by_user(db: Session, user_id: int, skip: int = 0, limit: int = 100, journey_id: Optional[int] = None) -> List[ChatMessage]:
+    query = db.query(ChatMessage).filter(ChatMessage.user_id == user_id)
+    if journey_id is not None:
+        query = query.filter(ChatMessage.journey_id == journey_id)
+    else:
+        query = query.filter(ChatMessage.journey_id.is_(None))
+    return query.order_by(ChatMessage.timestamp.asc()).offset(skip).limit(limit).all()
 
 def create_chat_message(db: Session, message: ChatMessageCreate) -> ChatMessage:
     db_message = ChatMessage(**message.model_dump())

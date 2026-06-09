@@ -9,9 +9,9 @@ from app.api.deps import get_current_user
 from app.models.user import User
 from app.models.journey import Journey
 from app.models.daily_plan import DailyPlan
-from app.agents.master_planner import generate_roadmap
 from app.crud import get_equivalent_journey, clone_journey_for_user
-from app.schemas.journey import JourneyResponse, JourneyGenerateRequest, DailyPlanResponse
+from app.agents.master_planner import generate_roadmap, modify_roadmap
+from app.schemas.journey import JourneyResponse, JourneyGenerateRequest, JourneyModifyRequest, DailyPlanResponse
 
 router = APIRouter()
 
@@ -57,6 +57,25 @@ def get_journey(
     if not journey:
         raise HTTPException(status_code=404, detail="Journey not found")
     return journey
+
+@router.delete("/{journey_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_journey(
+    journey_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Delete a journey and all of its associated data (DailyPlans, Tasks, Submissions, ChatMessages).
+    """
+    stmt = select(Journey).where(Journey.id == journey_id, Journey.user_id == current_user.id)
+    journey = db.execute(stmt).scalars().unique().first()
+    
+    if not journey:
+        raise HTTPException(status_code=404, detail="Journey not found")
+        
+    db.delete(journey)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 @router.post("/generate", status_code=status.HTTP_201_CREATED, response_model=JourneyResponse)
 async def generate_new_journey(
@@ -158,6 +177,88 @@ async def generate_new_journey(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred during journey generation: {str(e)}"
+        )
+
+@router.post("/{journey_id}/modify", response_model=JourneyResponse)
+async def modify_journey(
+    journey_id: int,
+    request: JourneyModifyRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Endpoint to modify an existing learning journey using the Master Planner AI Agent.
+    """
+    stmt = (
+        select(Journey)
+        .options(joinedload(Journey.daily_plans))
+        .where(Journey.id == journey_id, Journey.user_id == current_user.id)
+    )
+    db_journey = db.execute(stmt).scalars().unique().first()
+    
+    if not db_journey:
+        raise HTTPException(status_code=404, detail="Journey not found")
+        
+    try:
+        # Separate completed vs uncompleted plans
+        all_plans = sorted(db_journey.daily_plans, key=lambda p: p.day_number)
+        completed_plans = [p for p in all_plans if p.completion_status or (p.theoretical_topic_content and p.theoretical_topic_content.strip())]
+        uncompleted_plans = [p for p in all_plans if not p.completion_status and not (p.theoretical_topic_content and p.theoretical_topic_content.strip())]
+        
+        target_days = len(uncompleted_plans)
+        if target_days == 0:
+            raise ValueError("All days are already completed. Nothing to modify.")
+            
+        start_day_number = uncompleted_plans[0].day_number if uncompleted_plans else len(all_plans) + 1
+        
+        roadmap = await modify_roadmap(
+            user_prompt=request.prompt,
+            existing_title=db_journey.journey_title,
+            existing_overview=db_journey.overview,
+            completed_plans=completed_plans,
+            target_days=target_days,
+            start_day_number=start_day_number,
+            db=db
+        )
+        
+        # Update Journey metadata
+        db_journey.journey_title = roadmap.journey_title
+        db_journey.overview = roadmap.overview
+        
+        # Delete uncompleted plans
+        for p in uncompleted_plans:
+            db.delete(p)
+            
+        # Add new plans
+        for plan_item in roadmap.daily_plans:
+            db_plan = DailyPlan(
+                journey_id=db_journey.id,
+                day_number=plan_item.day_number,
+                title=plan_item.title,
+                concepts_to_cover=plan_item.concepts_to_cover,
+                difficulty=plan_item.difficulty
+            )
+            db.add(db_plan)
+            
+        db.commit()
+        db.refresh(db_journey)
+        
+        journey = (
+            db.query(Journey)
+            .options(joinedload(Journey.daily_plans))
+            .filter(Journey.id == db_journey.id)
+            .first()
+        )
+        return journey
+
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        db.rollback()
+        print(f"Error during journey modification: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred during journey modification: {str(e)}"
         )
 
 @router.get("/{journey_id}/export-pdf")

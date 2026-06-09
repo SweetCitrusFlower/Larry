@@ -6,6 +6,8 @@ import { taskAPI, submissionAPI, dailyPlanAPI, chatAPI, hintsAPI } from '../serv
 import { ArrowLeft, Loader2, Send, Lightbulb } from 'lucide-react';
 import IdleAssistanceNotification from './IdleAssistanceNotification';
 import { useParams, useNavigate } from 'react-router-dom';
+import { autopilotBus } from '../context/AutopilotContext';
+import { demoAPI } from '../services/api';
 
 const Workspace = () => {
   const { dailyPlanId } = useParams();
@@ -47,6 +49,83 @@ const Workspace = () => {
     }
   }, [dailyPlanId]);
 
+  // Autopilot Ghost Mode listeners
+  useEffect(() => {
+    let typeInterval;
+    const handleScroll = () => {
+      const container = document.getElementById('theory-container');
+      if (!container) return;
+      let start = container.scrollTop;
+      let end = container.scrollHeight - container.clientHeight;
+      if (end <= 0) return;
+      
+      const duration = 5000;
+      const startTime = performance.now();
+      
+      const animateScroll = (currentTime) => {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        container.scrollTop = start + (end - start) * progress;
+        if (progress < 1) {
+          requestAnimationFrame(animateScroll);
+        }
+      };
+      requestAnimationFrame(animateScroll);
+    };
+
+    const handleTypeCode = async () => {
+      if (!task) {
+        autopilotBus.emit('GHOST_CODE_TYPING_DONE');
+        return;
+      }
+      try {
+        // Fetch the generated code, providing the starter code as context
+        const res = await demoAPI.solveTask(task.description, task.starter_code);
+        const generatedCode = res.data.code;
+        
+        // Clear the editor so we can type the full code from scratch
+        setCode('');
+        
+        let i = 0;
+        typeInterval = setInterval(() => {
+          setCode(prev => prev + generatedCode.charAt(i));
+          i++;
+          if (i >= generatedCode.length) {
+            clearInterval(typeInterval);
+            // Tell Orchestrator we are done typing
+            autopilotBus.emit('GHOST_CODE_TYPING_DONE');
+          }
+        }, 50); // fast typing
+
+      } catch (err) {
+        console.error("Ghost failed to solve task:", err);
+        // Ensure we don't hang the orchestrator if it fails
+        autopilotBus.emit('GHOST_CODE_TYPING_DONE');
+      }
+    };
+
+    const handleGhostSubmit = () => {
+      document.getElementById('workspace-submit-btn')?.click();
+    };
+
+    const handleGhostReturn = () => {
+      handleBack();
+    };
+
+    const unsubScroll = autopilotBus.on('GHOST_SCROLL_THEORY', handleScroll);
+    const unsubType = autopilotBus.on('GHOST_TYPE_CODE_START', handleTypeCode);
+    const unsubSubmit = autopilotBus.on('GHOST_SUBMIT_CODE', handleGhostSubmit);
+    const unsubReturn = autopilotBus.on('GHOST_RETURN_TO_JOURNEY', handleGhostReturn);
+
+    return () => {
+      clearInterval(typeInterval);
+      unsubScroll();
+      unsubType();
+      unsubSubmit();
+      unsubReturn();
+    };
+  }, [task]);
+
   const handleSubmit = async () => {
     if (!task) return;
     setSubmitting(true);
@@ -62,6 +141,16 @@ const Workspace = () => {
       if (sub.stderr) out += `\nErrors/Failures:\n${sub.stderr}\n`;
       
       setOutput(out);
+      
+      // Inject a hidden div so the orchestrator knows it succeeded/finished
+      setTimeout(() => {
+         const marker = document.createElement('div');
+         marker.className = 'console-output-success hidden';
+         document.body.appendChild(marker);
+         // Cleanup marker after a bit
+         setTimeout(() => marker.remove(), 10000);
+      }, 500);
+
     } catch (e) {
       setOutput(`Error connecting to server:\n${e.message}`);
     } finally {
@@ -159,7 +248,7 @@ const Workspace = () => {
            <h2 className="text-lg font-bold text-white tracking-tight">Day {dailyPlan.day_number}: {dailyPlan.title}</h2>
         </div>
         
-        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+        <div id="theory-container" className="flex-1 overflow-y-auto p-8 custom-scrollbar">
            {/* Rendering Markdown with Tailwind Typography prose */}
            <div className="prose prose-invert prose-slate max-w-none prose-headings:text-slate-100 prose-a:text-blue-400 prose-code:text-blue-300">
              <ReactMarkdown>{dailyPlan.theoretical_topic_content || '*No content generated.*'}</ReactMarkdown>

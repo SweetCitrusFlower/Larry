@@ -6,6 +6,7 @@ class ChatMessageBase(BaseModel):
     role: str # "user", "assistant", "system"
     content: str
     daily_plan_id: Optional[int] = None
+    journey_id: Optional[int] = None
 
 class ChatMessageCreate(ChatMessageBase):
     user_id: int

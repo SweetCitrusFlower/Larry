@@ -3,6 +3,7 @@ import { chatAPI, journeyAPI, knowledgeSourceAPI } from '../services/api';
 import { Send, Sparkles, Loader2, User, Bot, Paperclip } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
+import { autopilotBus } from '../context/AutopilotContext';
 
 const ChatPane = () => {
   const [messages, setMessages] = useState([]);
@@ -21,15 +22,33 @@ const ChatPane = () => {
         if (journeyId) {
           const res = await journeyAPI.getJourney(journeyId);
           const j = res.data;
-          setMessages([
-            { role: 'assistant', content: "Hi, I'm Larry. What would you like to learn today? Tell me the topic and how many days you have." },
-            { role: 'user', content: `I want to learn ${j.original_prompt} in ${j.target_days} days.` },
-            { role: 'assistant', content: `Great! I've generated your ${j.journey_title} roadmap. Check it out on the right.` }
-          ]);
+          const histRes = await chatAPI.getMessages(journeyId);
+          
+          let loadedMessages = [];
+          if (histRes.data && histRes.data.length > 0) {
+            loadedMessages = histRes.data.map(m => ({ role: m.role, content: m.content }));
+          }
+
+          let initialMessages = [
+            { role: 'assistant', content: "Hi, I'm Larry. What would you like to learn today? Tell me the topic and how many days you have." }
+          ];
+
+          // Check if loadedMessages already contains the original prompt
+          // We check the first few messages just to be safe
+          const hasOriginalPrompt = loadedMessages.some(m => m.role === 'user' && m.content === j.original_prompt);
+
+          if (!hasOriginalPrompt) {
+             initialMessages.push({ role: 'user', content: j.original_prompt });
+             initialMessages.push({ role: 'assistant', content: `Great! I've generated your ${j.journey_title} roadmap. Check it out on the right.` });
+          }
+
+          initialMessages = [...initialMessages, ...loadedMessages];
+          setMessages(initialMessages);
         } else {
           setMessages([{ role: 'assistant', content: "Hi, I'm Larry. What would you like to learn today? Tell me the topic and how many days you have." }]);
         }
       } catch (err) {
+        console.error("Failed to load chat history", err);
         setMessages([{ role: 'assistant', content: "Hi, I'm Larry. What would you like to learn today? Tell me the topic and how many days you have." }]);
       }
     };
@@ -42,13 +61,43 @@ const ChatPane = () => {
     }
   }, [messages]);
 
+  // Autopilot ghost mode listeners
+  useEffect(() => {
+    let typeInterval;
+    const handleGhostType = (text) => {
+      setInput('');
+      let i = 0;
+      typeInterval = setInterval(() => {
+        setInput(prev => prev + text.charAt(i));
+        i++;
+        if (i >= text.length) clearInterval(typeInterval);
+      }, 100);
+    };
+
+    const handleGhostSubmit = () => {
+      // Need a tiny delay so the input state is fully committed
+      setTimeout(() => {
+        document.getElementById('chat-send-btn')?.click();
+      }, 100);
+    };
+
+    const unsubType = autopilotBus.on('GHOST_TYPE_CHAT', handleGhostType);
+    const unsubSubmit = autopilotBus.on('GHOST_SUBMIT_CHAT', handleGhostSubmit);
+
+    return () => {
+      clearInterval(typeInterval);
+      unsubType();
+      unsubSubmit();
+    };
+  }, []);
+
   const pushMessage = (role, content) =>
     setMessages((prev) => [...prev, { role, content }]);
 
   const handleSend = async () => {
     if (!input.trim() || loading) return;
 
-    const userContent = `I want to learn ${input} in ${days} days.`;
+    const userContent = input;
     pushMessage('user', userContent);
     const savedInput = input;
     const savedDays = parseInt(days, 10);
@@ -56,19 +105,33 @@ const ChatPane = () => {
     setLoading(true);
 
     try {
-      // 1. Persist the user message to the backend
-      await chatAPI.sendMessage(userContent, 'user');
+      // 1. Persist the user message to the backend if we are already in a journey
+      if (journeyId) {
+        await chatAPI.sendMessage(userContent, 'user', null, journeyId);
+      }
 
-      // 2. Call the journey generation endpoint
-      const response = await journeyAPI.generate(savedInput, savedDays);
-      const journey = response.data;
+      if (journeyId) {
+         // Modify existing journey
+         const response = await journeyAPI.modify(journeyId, savedInput);
+         const journey = response.data;
+         const assistantResponse = `I've updated your ${journey.journey_title} roadmap based on your feedback. Check it out on the right.`;
+         pushMessage('assistant', assistantResponse);
+         await chatAPI.sendMessage(assistantResponse, 'assistant', null, journey.id);
+         autopilotBus.emit('JOURNEY_MODIFIED');
+      } else {
+         // 2. Call the journey generation endpoint
+         const response = await journeyAPI.generate(savedInput, savedDays);
+         const journey = response.data;
 
-      pushMessage(
-        'assistant',
-        `Great! I've generated your ${journey.journey_title} roadmap. Check it out on the right.`
-      );
+         const assistantResponse = `Great! I've generated your ${journey.journey_title} roadmap. Check it out on the right.`;
+         pushMessage('assistant', assistantResponse);
+         
+         // Persist the initial user prompt and assistant response linked to the new journey
+         await chatAPI.sendMessage(savedInput, 'user', null, journey.id);
+         await chatAPI.sendMessage(assistantResponse, 'assistant', null, journey.id);
 
-      navigate(`/journey/${journey.id}`);
+         navigate(`/journey/${journey.id}`);
+      }
     } catch (err) {
       const detail =
         err.response?.data?.detail || 'Sorry, I encountered an error. Please try again.';
@@ -107,7 +170,7 @@ const ChatPane = () => {
   };
 
   return (
-    <div className="flex flex-col h-full glass-card overflow-hidden">
+    <div className="flex flex-col h-full glass-card overflow-hidden tour-chat">
       <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50 shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
@@ -205,6 +268,7 @@ const ChatPane = () => {
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
             />
             <button
+              id="chat-send-btn"
               onClick={handleSend}
               disabled={!input.trim() || loading || uploadingFile}
               className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600 rounded-lg transition-colors text-white"

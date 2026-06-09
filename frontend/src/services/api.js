@@ -57,11 +57,12 @@ export const authAPI = {
 // ── Chat API ──────────────────────────────────────────────────────────────────
 // Backend ChatMessageCreate schema: { role, content, user_id, daily_plan_id? }
 export const chatAPI = {
-  getMessages: () => api.get('/chat-messages/'),
-  sendMessage: (content, role = 'user', dailyPlanId = null) => {
+  getMessages: (journeyId = null) => api.get('/chat-messages/', { params: journeyId ? { journey_id: journeyId } : {} }),
+  sendMessage: (content, role = 'user', dailyPlanId = null, journeyId = null) => {
     const user_id = getUserIdFromToken();
     const payload = { role, content, user_id };
     if (dailyPlanId !== null) payload.daily_plan_id = dailyPlanId;
+    if (journeyId !== null) payload.journey_id = journeyId;
     return api.post('/chat-messages/', payload);
   },
   requestHint: (dailyPlanId, userQuery) => api.post(`/chat-messages/${dailyPlanId}/hint`, null, { params: { user_query: userQuery } }),
@@ -75,7 +76,10 @@ export const journeyAPI = {
   // generate expects { prompt: string, target_days: number }
   generate: (prompt, targetDays) =>
     api.post('/journeys/generate', { prompt, target_days: targetDays }),
+  modify: (id, prompt) => 
+    api.post(`/journeys/${id}/modify`, { prompt }),
   exportPdf: (id) => api.get(`/journeys/${id}/export-pdf`, { responseType: 'blob' }),
+  delete: (id) => api.delete(`/journeys/${id}`),
 };
 
 // ── Daily Plan API ────────────────────────────────────────────────────────────
@@ -119,9 +123,15 @@ export const knowledgeSourceAPI = {
 
 // ── Favorites API ─────────────────────────────────────────────────────────────
 export const favoritesAPI = {
-  getFavorites: (skip = 0, limit = 100) => api.get(`/favorites/?skip=${skip}&limit=${limit}`),
-  addFavorite: (data) => api.post('/favorites/', data),
-  removeFavorite: (id) => api.delete(`/favorites/${id}`)
+  addFavorite: (sourceId) => api.post(`/favorites/`, { knowledge_source_id: sourceId }),
+  removeFavorite: (sourceId) => api.delete(`/favorites/${sourceId}`),
+  getFavorites: (skip = 0, limit = 100) => api.get(`/favorites/?skip=${skip}&limit=${limit}`)
+};
+
+// ── Demo API ────────────────────────────────────────────────────────
+export const demoAPI = {
+  startDemo: () => api.post('/demo/start'),
+  solveTask: (taskDescription, starterCode = null) => api.post('/demo/solve-task', { task_description: taskDescription, starter_code: starterCode })
 };
 
 // ── Hints API (Idle Assistance) ────────────────────────────────────────────────
