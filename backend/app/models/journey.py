@@ -6,7 +6,6 @@ from app.db.database import Base
 
 if TYPE_CHECKING:
     from app.models.user import User
-    from app.models.task import Task
     from app.models.daily_plan import DailyPlan
 
 class Journey(Base):
@@ -18,7 +17,7 @@ class Journey(Base):
     target_days: Mapped[int] = mapped_column(default=1)
     journey_title: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     overview: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now)
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="journeys")

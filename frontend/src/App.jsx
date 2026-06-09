@@ -6,8 +6,16 @@ import RoadmapDisplay from './components/RoadmapDisplay';
 import AuthModal from './components/AuthModal';
 import Workspace from './components/Workspace';
 import Submissions from './components/Submissions';
-import { LogOut, Layout, BookOpen } from 'lucide-react';
+import { LogOut, Layout, BookOpen, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import StatisticsDashboard from './components/StatisticsDashboard';
+
+import Editor from '@monaco-editor/react';
+import axios from 'axios';
+import FavoriteButton from './components/FavoriteButton';
+import FavoritesPanel from './components/FavoritesPanel';
+import MaterialExplorer from './components/MaterialExplorer';
+import { FavoritesProvider } from './context/FavoritesContext';
 
 // A wrapper for the Dashboard (New Journey view)
 const Dashboard = () => {
@@ -26,7 +34,7 @@ const Dashboard = () => {
           </div>
           <h2 className="text-2xl font-bold text-white mb-2">Ready to Start?</h2>
           <p className="text-slate-500 max-w-sm">
-            Ask Larry to generate a roadmap for any skill you want to master. 
+            Ask Larry to generate a roadmap for any skill you want to master.
             Your personalized path to success starts here.
           </p>
         </div>
@@ -38,6 +46,7 @@ const Dashboard = () => {
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(!isAuthenticated);
+  const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
 
   // Sync modal state if auth state changes
   useEffect(() => {
@@ -52,7 +61,8 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col font-sans h-screen overflow-hidden">
+    <FavoritesProvider isAuthenticated={isAuthenticated}>
+      <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col font-sans h-screen overflow-hidden">
       {/* Header */}
       <header className="h-16 border-b border-slate-800 bg-slate-950/50 backdrop-blur-md flex items-center justify-between px-8 shrink-0 z-40">
         <div className="flex items-center gap-3">
@@ -66,13 +76,22 @@ export default function App() {
 
         <div className="flex items-center gap-6">
           {isAuthenticated && (
-            <button 
-              onClick={handleLogout}
-              className="flex items-center gap-2 text-sm text-slate-400 hover:text-red-400 transition-colors"
-            >
-              <LogOut size={16} />
-              <span>Sign Out</span>
-            </button>
+            <>
+              <button 
+                onClick={() => setIsFavoritesOpen(true)}
+                className="flex items-center gap-2 text-sm text-yellow-400 hover:text-yellow-300 transition-colors"
+              >
+                <Star size={16} />
+                <span>Favorites</span>
+              </button>
+              <button 
+                onClick={handleLogout}
+                className="flex items-center gap-2 text-sm text-slate-400 hover:text-red-400 transition-colors"
+              >
+                <LogOut size={16} />
+                <span>Sign Out</span>
+              </button>
+            </>
           )}
         </div>
       </header>
@@ -97,23 +116,27 @@ export default function App() {
                   } />
                   <Route path="/workspace/:dailyPlanId" element={<Workspace />} />
                   <Route path="/submissions" element={<Submissions />} />
+                  <Route path="/materials" element={<MaterialExplorer />} />
+                  <Route path="/statistics" element={<StatisticsDashboard />} />
                 </>
               ) : (
+              <>
                 <Route path="/login" element={
                   <div className="flex-1 flex flex-col items-center justify-center text-slate-500">
                      <p>Please log in to continue.</p>
                   </div>
                 } />
-              )}
-              
-              {/* Fallback route */}
-              <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/login"} replace />} />
-           </Routes>
+              </>
+            )}
+
+            {/* Fallback route */}
+            <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/login"} replace />} />
+          </Routes>
         </main>
       </div>
 
-      <AuthModal 
-        isOpen={isAuthModalOpen} 
+      <AuthModal
+        isOpen={isAuthModalOpen}
         onClose={() => {
           // If they close the modal but aren't authenticated, re-open it or let them stay on the blank login screen
           if (!isAuthenticated) setIsAuthModalOpen(true);
@@ -124,6 +147,12 @@ export default function App() {
           setIsAuthModalOpen(false);
         }}
       />
+      
+      <FavoritesPanel 
+        isOpen={isFavoritesOpen} 
+        onClose={() => setIsFavoritesOpen(false)} 
+      />
     </div>
+    </FavoritesProvider>
   );
 }

@@ -17,6 +17,7 @@ class DailyPlan(Base):
     concepts_to_cover: Mapped[list] = mapped_column(JSON)
     difficulty: Mapped[str] = mapped_column(String)
     theoretical_topic_content: Mapped[Optional[str]] = mapped_column(String, nullable=True) # Retained for Content Creator AI
+    rag_context_payload: Mapped[Optional[str]] = mapped_column(String, nullable=True) # Retained for Socratic Tutor context inheritance
     completion_status: Mapped[bool] = mapped_column(default=False)
     content_status: Mapped[str] = mapped_column(String, default="PENDING")
     recommended_problem_tags: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
@@ -24,3 +25,4 @@ class DailyPlan(Base):
     # Relationships
     journey: Mapped["Journey"] = relationship(back_populates="daily_plans")
     tasks: Mapped[List["Task"]] = relationship(back_populates="daily_plan", cascade="all, delete-orphan")
+    

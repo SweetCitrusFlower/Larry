@@ -196,8 +196,8 @@ alembic upgrade head
 The core RAG (Retrieval-Augmented Generation) ingestion module has been fully implemented. It processes uploaded PDFs asynchronously without blocking the FastAPI event loop.
 
 - **Native Vision Extraction**: Uses the `google-cloud-aiplatform` SDK to send raw PDF bytes to Gemini as inline multimodal data, enforcing strict Markdown output with detailed visual descriptions.
-- **Smart Chunking**: LangChain's `MarkdownHeaderTextSplitter` semantically segments the text.
-- **Vector Storage**: Uses Google's Vertex Embeddings (`text-embedding-004`) to embed the chunks and stores them in our Dockerized ChromaDB instance (`larry_knowledge_base` collection).
+- **Smart Chunking**: LangChain's `MarkdownHeaderTextSplitter` semantically segments the text while preserving structural header context in the metadata.
+- **Vector Storage**: Uses Google's Vertex Embeddings (`gemini-embedding-001`) to embed the chunks and stores them in our Dockerized ChromaDB instance (`larry_knowledge_base` collection).
 
 **Google Cloud Setup Requirement:**
 To run the RAG pipeline locally, you must authenticate with Google Cloud using Application Default Credentials (ADC):

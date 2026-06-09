@@ -6,9 +6,6 @@ const API_BASE_URL = '/api/v1';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
 // ── Request Interceptor: Attach Bearer Token ──────────────────────────────────
@@ -51,9 +48,7 @@ export const authAPI = {
     const formData = new FormData();
     formData.append('username', credentials.email);
     formData.append('password', credentials.password);
-    return api.post('/auth/login', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    return api.post('/auth/login', formData);
   },
   // POST /auth/register — backend expects { email, password }
   register: (userData) => api.post('/auth/register', userData),
@@ -69,6 +64,7 @@ export const chatAPI = {
     if (dailyPlanId !== null) payload.daily_plan_id = dailyPlanId;
     return api.post('/chat-messages/', payload);
   },
+  requestHint: (dailyPlanId, userQuery) => api.post(`/chat-messages/${dailyPlanId}/hint`, null, { params: { user_query: userQuery } }),
 };
 
 // ── Journey API ───────────────────────────────────────────────────────────────
@@ -107,7 +103,8 @@ export const submissionAPI = {
       result_status: 'pending'
     });
   },
-  getMySubmissions: (skip = 0, limit = 100) => api.get(`/submissions/user?skip=${skip}&limit=${limit}`)
+  getMySubmissions: (skip = 0, limit = 100) => api.get(`/submissions/user?skip=${skip}&limit=${limit}`),
+  getStatistics: () => api.get('/submissions/user/statistics')
 };
 
 // ── Knowledge Source API ────────────────────────────────────────────────────────
@@ -115,10 +112,22 @@ export const knowledgeSourceAPI = {
   upload: (file) => {
     const formData = new FormData();
     formData.append('file', file);
-    return api.post('/knowledge-sources/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-  }
+    return api.post('/knowledge-sources/upload', formData);
+  },
+  getKnowledgeSources: (skip = 0, limit = 100) => api.get(`/knowledge-sources/?skip=${skip}&limit=${limit}`)
+};
+
+// ── Favorites API ─────────────────────────────────────────────────────────────
+export const favoritesAPI = {
+  getFavorites: (skip = 0, limit = 100) => api.get(`/favorites/?skip=${skip}&limit=${limit}`),
+  addFavorite: (data) => api.post('/favorites/', data),
+  removeFavorite: (id) => api.delete(`/favorites/${id}`)
+};
+
+// ── Hints API (Idle Assistance) ────────────────────────────────────────────────
+export const hintsAPI = {
+  generateHint: (request) => api.post('/hints/generate-hint', request),
+  dismissHint: (hintId) => api.patch(`/hints/dismiss-hint/${hintId}`)
 };
 
 export const journeysAPI = {

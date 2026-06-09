@@ -38,7 +38,7 @@ async def generate_daily_lesson(daily_plan_id: int, db: Session):
         chroma_port = int(os.getenv("CHROMA_PORT", "8000"))
         chroma_client = chromadb.HttpClient(host=chroma_host, port=chroma_port)
         
-        embedding_model_name = os.getenv("VERTEX_EMBEDDING_MODEL", "text-embedding-004")
+        embedding_model_name = os.getenv("VERTEX_EMBEDDING_MODEL", "gemini-embedding-001")
         embeddings = VertexAIEmbeddings(model=embedding_model_name)
         
         vectorstore = Chroma(
@@ -84,6 +84,7 @@ Respond ONLY with valid Markdown text. Do not include introductory conversationa
 
         # 4. Save the generated lesson to the DailyPlan
         daily_plan.theoretical_topic_content = generated_markdown
+        daily_plan.rag_context_payload = rag_context
 
         # 5. Smart Problem Selection
         recommended_tags = daily_plan.recommended_problem_tags or []
