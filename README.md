@@ -99,7 +99,7 @@ erDiagram
         int task_id FK
         int user_id FK
     }
-
+```
 1. Hybrid LLM Architecture
 Larry uses a cost-effective and highly capable hybrid model strategy:
 
