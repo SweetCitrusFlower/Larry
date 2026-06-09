@@ -12,6 +12,7 @@ This document serves as the official project architecture and documentation.
 
 The system is designed with a modern decoupled architecture, separating the client interface from the backend API, the AI orchestration layer, and the isolated code evaluation environment.
 
+```mermaid
 sequenceDiagram
     autonumber
 
@@ -35,7 +36,7 @@ sequenceDiagram
     N-->>F: Forward raspuns
     F-->>U: Randeaza interfata grafic
 
-
+```
 
 ## 1. Hybrid LLM Architecture
 Larry uses a cost-effective and highly capable hybrid model strategy:
