@@ -65,6 +65,45 @@ graph TD
     class Ollama ai;
 ```
 
+```mermaid
+erDiagram
+    USER ||--o{ JOURNEY : creates
+    JOURNEY ||--|{ DAILY_PLAN : contains
+    DAILY_PLAN ||--o| TASK : assigns
+    USER ||--o{ USER_SUBMISSION : submits
+    TASK ||--o{ USER_SUBMISSION : evaluates
+
+    JOURNEY {
+        int id PK
+        string original_prompt
+        string journey_title
+        string overview
+        datetime created_at
+    }
+
+    DAILY_PLAN {
+        int id PK
+        int day_number
+        string title
+        json concepts_to_cover
+        string difficulty
+        string theoretical_topic_content
+        string rag_context_payload
+        bool completion_status
+        int journey_id FK
+    }
+
+    USER_SUBMISSION {
+        int id PK
+        string submitted_code
+        string result_status
+        float execution_time
+        int memory_usage
+        int task_id FK
+        int user_id FK
+    }
+```
+
 ## 1. Hybrid LLM Architecture
 Larry uses a cost-effective and highly capable hybrid model strategy:
 
