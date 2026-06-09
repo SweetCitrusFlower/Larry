@@ -13,8 +13,6 @@ This document serves as the official project architecture and documentation.
 The system is designed with a modern decoupled architecture, separating the client interface from the backend API, the AI orchestration layer, and the isolated code evaluation environment.
 
 ### Sequence Diagram (Journey Generation)
-
-```mermaid
 sequenceDiagram
     autonumber
     actor U as Utilizator
@@ -36,8 +34,6 @@ sequenceDiagram
     B-->>N: 200 OK + Datele Roadmap-ului
     N-->>F: Forward răspuns
     F-->>U: Randează interfața cu Roadmap-ul
-
-
 graph TD
     User((Utilizator / Browser))
     
@@ -62,44 +58,6 @@ graph TD
     
     classDef ai fill:#f9d0c4,stroke:#333,stroke-width:2px;
     class Ollama ai;
-
-erDiagram
-    USER ||--o{ JOURNEY : "creează"
-    JOURNEY ||--|{ DAILY_PLAN : "conține"
-    DAILY_PLAN ||--o| TASK : "asignează"
-    USER ||--o{ USER_SUBMISSION : "trimite"
-    TASK ||--o{ USER_SUBMISSION : "evaluează"
-
-    JOURNEY {
-        int id PK
-        string original_prompt
-        string journey_title
-        string overview
-        datetime created_at
-    }
-
-    DAILY_PLAN {
-        int id PK
-        int day_number
-        string title
-        json concepts_to_cover
-        string difficulty
-        string theoretical_topic_content
-        string rag_context_payload
-        bool completion_status
-        int journey_id FK
-    }
-
-    USER_SUBMISSION {
-        int id PK
-        string submitted_code
-        string result_status "Ex: accepted, failed, error"
-        float execution_time
-        int memory_usage
-        int task_id FK
-        int user_id FK
-    }
-```
 1. Hybrid LLM Architecture
 Larry uses a cost-effective and highly capable hybrid model strategy:
 
