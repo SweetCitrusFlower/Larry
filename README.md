@@ -16,48 +16,27 @@ The system is designed with a modern decoupled architecture, separating the clie
 sequenceDiagram
     autonumber
     actor U as Utilizator
-    participant F as Frontend (React)
-    participant N as Nginx (Reverse Proxy)
-    participant B as Backend (FastAPI)
-    participant LLM as Ollama (Qwen 2.5 Coder)
+    participant F as Frontend React
+    participant N as Nginx Reverse Proxy
+    participant B as Backend FastAPI
+    participant LLM as Ollama Qwen Coder
     participant DB as PostgreSQL
 
-    U->>F: Scrie "Vreau să învăț Python"
+    U->>F: Scrie promptul de invatare
     F->>N: POST /api/v1/journeys/generate
-    N->>B: Forward către containerul Python
-    B->>B: Formatează SYSTEM_PROMPT & extrage Tag-uri
-    B->>LLM: Cerere cu format="json"
-    Note over LLM: Agentul Master Planner gândește...
-    LLM-->>B: Returnează JSON structurat
-    B->>DB: Salvează noul JourneyRoadmap, DailyPlans și Tasks
+    N->>B: Forward catre containerul Python
+    B->>B: Formateaza SYSTEM_PROMPT
+    B->>LLM: Cerere cu format JSON
+    Note over LLM: Agentul Master Planner proceseaza...
+    LLM-->>B: Returneaza JSON structurat
+    B->>DB: Salveaza Journey, DailyPlans si Tasks
     DB-->>B: Confirmare salvare
     B-->>N: 200 OK + Datele Roadmap-ului
-    N-->>F: Forward răspuns
-    F-->>U: Randează interfața cu Roadmap-ul
-graph TD
-    User((Utilizator / Browser))
-    
-    subgraph Docker Compose
-        Nginx[Nginx Container\nPort 80]
-        React[React Frontend\nStatic Files]
-        FastAPI[FastAPI Backend\nPort 8000]
-        Ollama[Ollama Container\nPort 11434]
-        Judge0[Judge0 Code Runner\nPort 2358]
-        Postgres[(PostgreSQL DB\nPort 5432)]
-        Redis[(Redis Cache)]
-    end
+    N-->>F: Forward raspuns
+    F-->>U: Randeaza interfata grafic
 
-    User -->|HTTP| Nginx
-    Nginx -->|Servește Interfața| React
-    Nginx -->|Proxy /api/v1/| FastAPI
-    
-    FastAPI -->|LangChain| Ollama
-    FastAPI -->|HTTP REST| Judge0
-    FastAPI -->|SQLAlchemy| Postgres
-    FastAPI -->|Sesiuni/Ratelimit| Redis
-    
-    classDef ai fill:#f9d0c4,stroke:#333,stroke-width:2px;
-    class Ollama ai;
+
+
 1. Hybrid LLM Architecture
 Larry uses a cost-effective and highly capable hybrid model strategy:
 
