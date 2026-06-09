@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import EditorPane from './EditorPane';
 import ConsolePane from './ConsolePane';
-import { taskAPI, submissionAPI, dailyPlanAPI } from '../services/api';
-import { ArrowLeft, Loader2, Send } from 'lucide-react';
+import { taskAPI, submissionAPI, dailyPlanAPI, chatAPI, hintsAPI } from '../services/api';
+import { ArrowLeft, Loader2, Send, Lightbulb } from 'lucide-react';
+import IdleAssistanceNotification from './IdleAssistanceNotification';
 import { useParams, useNavigate } from 'react-router-dom';
 import { autopilotBus } from '../context/AutopilotContext';
 import { demoAPI } from '../services/api';
@@ -16,8 +17,14 @@ const Workspace = () => {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [hintLoading, setHintLoading] = useState(false);
   const [output, setOutput] = useState('');
   const [input, setInput] = useState('');
+
+  // Idle assistance state
+  const [idleNotificationVisible, setIdleNotificationVisible] = useState(false);
+  const [hintText, setHintText] = useState('');
+  const [currentHintId, setCurrentHintId] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -151,6 +158,65 @@ const Workspace = () => {
     }
   };
 
+  const handleHint = async () => {
+    if (!task) return;
+    const userQuery = window.prompt("What part are you stuck on?");
+    if (!userQuery) return;
+    
+    setHintLoading(true);
+    setOutput((prev) => prev + `\nAsking Larry for a hint...\n`);
+    try {
+      const response = await chatAPI.requestHint(dailyPlanId, userQuery);
+      const hintMsg = response.data.content;
+      setOutput((prev) => prev + `\n💡 LARRY TUTOR:\n${hintMsg}\n\n`);
+    } catch (e) {
+      setOutput((prev) => prev + `\nError getting hint:\n${e.message}\n\n`);
+    } finally {
+      setHintLoading(false);
+    }
+  }
+  /**
+   * Called when user has been idle for 4 minutes
+   * Fetches a context-aware hint from the backend
+   */
+  const handleIdleDetected = useCallback(async () => {
+    if (!task) return;
+    
+    setIdleNotificationVisible(true);
+    setHintLoading(true);
+    setHintText('');
+    
+    try {
+      const response = await hintsAPI.generateHint({
+        task_id: task.id,
+        user_id: localStorage.getItem('userId'), // Assume userId is stored
+        current_code: code
+      });
+      
+      setHintText(response.data.hint_text);
+      setCurrentHintId(response.data.id);
+    } catch (e) {
+      console.error("Failed to fetch hint:", e);
+      setHintText("I wasn't able to generate a hint right now. Try reviewing the concepts or the problem description!");
+    } finally {
+      setHintLoading(false);
+    }
+  }, [task, code]);
+
+  const handleDismissHint = async () => {
+    if (currentHintId) {
+      try {
+        await hintsAPI.dismissHint(currentHintId);
+      } catch (e) {
+        console.error("Failed to dismiss hint:", e);
+      }
+    }
+  };
+
+  const handleCloseNotification = () => {
+    setIdleNotificationVisible(false);
+  };
+
   if (loading || !dailyPlan) {
     return (
       <div className="flex h-full items-center justify-center text-slate-500 w-full">
@@ -206,18 +272,33 @@ const Workspace = () => {
          <div className="flex-1 bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col shadow-2xl">
             <div className="px-4 py-3 border-b border-slate-800 flex justify-between items-center bg-slate-950/50 backdrop-blur shrink-0">
                <span className="text-sm font-semibold text-slate-400 tracking-wide">workspace.py</span>
-               <button 
-                  id="workspace-submit-btn"
-                  onClick={handleSubmit} 
-                  disabled={submitting || !task}
-                  className="bg-green-600 hover:bg-green-500 disabled:bg-slate-700 disabled:text-slate-500 text-white px-5 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-lg flex items-center gap-2"
-               >
-                  {submitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                  Run & Submit
-               </button>
+               <div className="flex items-center gap-3">
+                  <button 
+                    onClick={handleHint} 
+                    disabled={hintLoading || submitting || !task}
+                    className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white px-4 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-lg flex items-center gap-2"
+                  >
+                    {hintLoading ? <Loader2 size={16} className="animate-spin" /> : <Lightbulb size={16} />}
+                    Ask Larry
+                  </button>
+                  <button 
+                    id="workspace-submit-btn"
+                    onClick={handleSubmit} 
+                    disabled={submitting || hintLoading || !task}
+                    className="bg-green-600 hover:bg-green-500 disabled:bg-slate-700 disabled:text-slate-500 text-white px-5 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-lg flex items-center gap-2"
+                  >
+                    {submitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                    Run & Submit
+                  </button>
+               </div>
             </div>
             <div className="flex-1 min-h-0">
-               <EditorPane language="python" code={code} setCode={setCode} />
+               <EditorPane 
+                 language="python" 
+                 code={code} 
+                 setCode={setCode}
+                 onActivityDetected={handleIdleDetected}
+               />
             </div>
          </div>
          
@@ -227,6 +308,15 @@ const Workspace = () => {
          </div>
          
       </div>
+
+      {/* Idle Assistance Notification */}
+      <IdleAssistanceNotification
+        isVisible={idleNotificationVisible}
+        hint={hintText}
+        loading={hintLoading}
+        onDismiss={handleDismissHint}
+        onClose={handleCloseNotification}
+      />
     </div>
   );
 };

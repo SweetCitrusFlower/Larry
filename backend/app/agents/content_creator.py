@@ -84,6 +84,7 @@ Respond ONLY with valid Markdown text. Do not include introductory conversationa
 
         # 4. Save the generated lesson to the DailyPlan
         daily_plan.theoretical_topic_content = generated_markdown
+        daily_plan.rag_context_payload = rag_context
 
         # 5. Smart Problem Selection
         recommended_tags = daily_plan.recommended_problem_tags or []

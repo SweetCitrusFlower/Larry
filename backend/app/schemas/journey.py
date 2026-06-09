@@ -41,4 +41,3 @@ class JourneyResponse(BaseModel):
     daily_plans: List[DailyPlanResponse] = []
     
     model_config = ConfigDict(from_attributes=True)
-

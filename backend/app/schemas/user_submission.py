@@ -39,3 +39,9 @@ class UserSubmissionResponse(UserSubmissionBase):
     daily_plan_title: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+class UserStatisticsResponse(BaseModel):
+    total_submissions: int
+    successful_submissions: int
+    failed_submissions: int
+    success_rate: float

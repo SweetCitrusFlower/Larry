@@ -9,6 +9,7 @@ import Submissions from './components/Submissions';
 import DemoPage from './components/DemoPage';
 import { LogOut, Layout, BookOpen, Star, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import StatisticsDashboard from './components/StatisticsDashboard';
 
 import Editor from '@monaco-editor/react';
 import axios from 'axios';
@@ -35,7 +36,7 @@ const Dashboard = () => {
           </div>
           <h2 className="text-2xl font-bold text-white mb-2">Ready to Start?</h2>
           <p className="text-slate-500 max-w-sm">
-            Ask Larry to generate a roadmap for any skill you want to master. 
+            Ask Larry to generate a roadmap for any skill you want to master.
             Your personalized path to success starts here.
           </p>
         </div>
@@ -134,23 +135,26 @@ export default function App() {
                   <Route path="/submissions" element={<Submissions />} />
                   <Route path="/materials" element={<MaterialExplorer />} />
                   <Route path="/student-demo" element={<DemoPage />} />
+                  <Route path="/statistics" element={<StatisticsDashboard />} />
                 </>
               ) : (
+              <>
                 <Route path="/login" element={
                   <div className="flex-1 flex flex-col items-center justify-center text-slate-500">
                      <p>Please log in to continue.</p>
                   </div>
                 } />
-              )}
-              
-              {/* Fallback route */}
-              <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/login"} replace />} />
-           </Routes>
+              </>
+            )}
+
+            {/* Fallback route */}
+            <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/login"} replace />} />
+          </Routes>
         </main>
       </div>
 
-      <AuthModal 
-        isOpen={isAuthModalOpen} 
+      <AuthModal
+        isOpen={isAuthModalOpen}
         onClose={() => {
           // If they close the modal but aren't authenticated, re-open it or let them stay on the blank login screen
           if (!isAuthenticated) setIsAuthModalOpen(true);

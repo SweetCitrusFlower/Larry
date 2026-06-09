@@ -4,14 +4,15 @@ from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.models.user import User
-from app.schemas.user_submission import UserSubmissionCreate, UserSubmissionUpdate, UserSubmissionResponse
+from app.schemas.user_submission import UserSubmissionCreate, UserSubmissionUpdate, UserSubmissionResponse, UserStatisticsResponse
 from app.crud.crud_user_submission import (
     get_user_submission, 
     get_submissions_by_user, 
     get_submissions_by_task, 
     create_user_submission, 
     update_user_submission, 
-    delete_user_submission
+    delete_user_submission,
+    get_user_statistics
 )
 from app.crud.crud_task import get_task
 from app.api.routers.tasks import verify_task_owner
@@ -104,6 +105,13 @@ from sqlalchemy.orm import joinedload
 from app.models.user_submission import UserSubmission
 from app.models.task import Task
 from app.models.daily_plan import DailyPlan
+
+@router.get("/user/statistics", response_model=UserStatisticsResponse)
+def read_user_statistics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return get_user_statistics(db, user_id=current_user.id)
 
 @router.get("/user", response_model=List[UserSubmissionResponse])
 def read_my_submissions(

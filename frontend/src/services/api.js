@@ -65,6 +65,7 @@ export const chatAPI = {
     if (journeyId !== null) payload.journey_id = journeyId;
     return api.post('/chat-messages/', payload);
   },
+  requestHint: (dailyPlanId, userQuery) => api.post(`/chat-messages/${dailyPlanId}/hint`, null, { params: { user_query: userQuery } }),
 };
 
 // ── Journey API ───────────────────────────────────────────────────────────────
@@ -106,7 +107,8 @@ export const submissionAPI = {
       result_status: 'pending'
     });
   },
-  getMySubmissions: (skip = 0, limit = 100) => api.get(`/submissions/user?skip=${skip}&limit=${limit}`)
+  getMySubmissions: (skip = 0, limit = 100) => api.get(`/submissions/user?skip=${skip}&limit=${limit}`),
+  getStatistics: () => api.get('/submissions/user/statistics')
 };
 
 // ── Knowledge Source API ────────────────────────────────────────────────────────
@@ -130,6 +132,12 @@ export const favoritesAPI = {
 export const demoAPI = {
   startDemo: () => api.post('/demo/start'),
   solveTask: (taskDescription, starterCode = null) => api.post('/demo/solve-task', { task_description: taskDescription, starter_code: starterCode })
+};
+
+// ── Hints API (Idle Assistance) ────────────────────────────────────────────────
+export const hintsAPI = {
+  generateHint: (request) => api.post('/hints/generate-hint', request),
+  dismissHint: (hintId) => api.patch(`/hints/dismiss-hint/${hintId}`)
 };
 
 export const journeysAPI = {
