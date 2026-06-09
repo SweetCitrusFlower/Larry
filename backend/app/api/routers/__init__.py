@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from . import auth, journeys, daily_plans, tasks, submissions, knowledge_sources, chat_messages, favorites
+from . import auth, journeys, daily_plans, tasks, submissions, knowledge_sources, chat_messages, favorites, demo
 
 api_router = APIRouter()
 
@@ -12,3 +12,4 @@ api_router.include_router(submissions.router, prefix="/submissions", tags=["subm
 api_router.include_router(knowledge_sources.router, prefix="/knowledge-sources", tags=["knowledge_sources"])
 api_router.include_router(chat_messages.router, prefix="/chat-messages", tags=["chat_messages"])
 api_router.include_router(favorites.router, prefix="/favorites", tags=["favorites"])
+api_router.include_router(demo.router, prefix="/demo", tags=["demo"])

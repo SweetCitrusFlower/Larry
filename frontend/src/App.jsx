@@ -6,6 +6,7 @@ import RoadmapDisplay from './components/RoadmapDisplay';
 import AuthModal from './components/AuthModal';
 import Workspace from './components/Workspace';
 import Submissions from './components/Submissions';
+import DemoPage from './components/DemoPage';
 import { LogOut, Layout, BookOpen, Star, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -132,6 +133,7 @@ export default function App() {
                   <Route path="/workspace/:dailyPlanId" element={<Workspace />} />
                   <Route path="/submissions" element={<Submissions />} />
                   <Route path="/materials" element={<MaterialExplorer />} />
+                  <Route path="/student-demo" element={<DemoPage />} />
                 </>
               ) : (
                 <Route path="/login" element={

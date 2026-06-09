@@ -27,11 +27,12 @@ def create_new_message(
 def read_messages(
     skip: int = 0,
     limit: int = 100,
+    journey_id: int = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
     Retrieve the chat history for the current user.
     """
-    messages = get_chat_messages_by_user(db, user_id=current_user.id, skip=skip, limit=limit)
+    messages = get_chat_messages_by_user(db, user_id=current_user.id, skip=skip, limit=limit, journey_id=journey_id)
     return messages
