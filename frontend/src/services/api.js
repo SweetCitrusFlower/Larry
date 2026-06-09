@@ -64,6 +64,7 @@ export const chatAPI = {
     if (dailyPlanId !== null) payload.daily_plan_id = dailyPlanId;
     return api.post('/chat-messages/', payload);
   },
+  requestHint: (dailyPlanId, userQuery) => api.post(`/chat-messages/${dailyPlanId}/hint`, null, { params: { user_query: userQuery } }),
 };
 
 // ── Journey API ───────────────────────────────────────────────────────────────

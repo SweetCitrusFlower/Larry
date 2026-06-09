@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import EditorPane from './EditorPane';
 import ConsolePane from './ConsolePane';
-import { taskAPI, submissionAPI, dailyPlanAPI } from '../services/api';
-import { ArrowLeft, Loader2, Send } from 'lucide-react';
+import { taskAPI, submissionAPI, dailyPlanAPI, chatAPI } from '../services/api';
+import { ArrowLeft, Loader2, Send, Lightbulb } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 
 const Workspace = () => {
@@ -14,6 +14,7 @@ const Workspace = () => {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [hintLoading, setHintLoading] = useState(false);
   const [output, setOutput] = useState('');
   const [input, setInput] = useState('');
 
@@ -59,6 +60,24 @@ const Workspace = () => {
       setOutput(`Error connecting to server:\n${e.message}`);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleHint = async () => {
+    if (!task) return;
+    const userQuery = window.prompt("What part are you stuck on?");
+    if (!userQuery) return;
+    
+    setHintLoading(true);
+    setOutput((prev) => prev + `\nAsking Larry for a hint...\n`);
+    try {
+      const response = await chatAPI.requestHint(dailyPlanId, userQuery);
+      const hintMsg = response.data.content;
+      setOutput((prev) => prev + `\n💡 LARRY TUTOR:\n${hintMsg}\n\n`);
+    } catch (e) {
+      setOutput((prev) => prev + `\nError getting hint:\n${e.message}\n\n`);
+    } finally {
+      setHintLoading(false);
     }
   };
 
@@ -117,14 +136,24 @@ const Workspace = () => {
          <div className="flex-1 bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col shadow-2xl">
             <div className="px-4 py-3 border-b border-slate-800 flex justify-between items-center bg-slate-950/50 backdrop-blur shrink-0">
                <span className="text-sm font-semibold text-slate-400 tracking-wide">workspace.py</span>
-               <button 
-                  onClick={handleSubmit} 
-                  disabled={submitting || !task}
-                  className="bg-green-600 hover:bg-green-500 disabled:bg-slate-700 disabled:text-slate-500 text-white px-5 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-lg flex items-center gap-2"
-               >
-                  {submitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                  Run & Submit
-               </button>
+               <div className="flex items-center gap-3">
+                  <button 
+                    onClick={handleHint} 
+                    disabled={hintLoading || submitting || !task}
+                    className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white px-4 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-lg flex items-center gap-2"
+                  >
+                    {hintLoading ? <Loader2 size={16} className="animate-spin" /> : <Lightbulb size={16} />}
+                    Ask Larry
+                  </button>
+                  <button 
+                    onClick={handleSubmit} 
+                    disabled={submitting || hintLoading || !task}
+                    className="bg-green-600 hover:bg-green-500 disabled:bg-slate-700 disabled:text-slate-500 text-white px-5 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-lg flex items-center gap-2"
+                  >
+                    {submitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                    Run & Submit
+                  </button>
+               </div>
             </div>
             <div className="flex-1 min-h-0">
                <EditorPane language="python" code={code} setCode={setCode} />
