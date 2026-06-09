@@ -281,39 +281,19 @@ class TestMasterPlannerEvals:
     Strategy: Mix of deterministic JSON validation + LLM-as-a-Judge logic check.
     """
 
-    @pytest.fixture(autouse=True)
-    def mock_planner_llm(self):
-        """Mock the LLM chain for all Master Planner tests."""
-        with patch('app.agents.master_planner.ChatPromptTemplate') as mock_prompt:
-            mock_chain = AsyncMock()
-            
-            # Helper to generate a fake valid JSON based on input
-            async def fake_ainvoke(kwargs):
-                expected_days = kwargs.get("target_days", 3)
-                fake_response = {
-                    "journey_title": "Mock Journey",
-                    "overview": "Mock Overview",
-                    "daily_plans": [
-                        {
-                            "day_number": i + 1,
-                            "title": f"Mock Day {i+1}",
-                            "concepts_to_cover": ["Concept A", "Concept B"],
-                            "difficulty": "Beginner",
-                            "recommended_problem_tags": ["python"]
-                        } for i in range(expected_days)
-                    ]
-                }
-                return fake_response
-
-            mock_chain.ainvoke.side_effect = fake_ainvoke
-            mock_prompt.from_messages.return_value.__or__.return_value.__or__.return_value = mock_chain
-            yield
+    # Removed mock_planner_llm fixture as requested to put mocks inside the tests
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("eval_case", PLANNER_EVAL_CASES, ids=[c.case_id for c in PLANNER_EVAL_CASES])
-    async def test_planner_outputs_valid_json(self, eval_case):
+    @patch("tests.agents.test_agent_evals.generate_roadmap")
+    async def test_planner_outputs_valid_json(self, mock_generate_roadmap, eval_case):
         """Deterministic check: planner must return parseable JSON."""
         expected_days = eval_case.metadata.get("expected_days", 0)
+        from app.schemas.planner_schemas import JourneyRoadmap, DailyPlanItem
+        mock_generate_roadmap.return_value = JourneyRoadmap(
+            journey_title="Mock", overview="Mock", 
+            daily_plans=[DailyPlanItem(day_number=i+1, title="M", concepts_to_cover=["A"], difficulty="Beginner", recommended_problem_tags=[]) for i in range(expected_days)]
+        )
         response = await call_master_planner(eval_case.user_input, expected_days)
         result = validate_planner_structure(response, expected_days)
 
@@ -324,12 +304,21 @@ class TestMasterPlannerEvals:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("eval_case", PLANNER_EVAL_CASES, ids=[c.case_id for c in PLANNER_EVAL_CASES])
-    async def test_planner_returns_correct_number_of_days(self, eval_case):
+    @patch("tests.agents.test_agent_evals.generate_roadmap")
+    async def test_planner_returns_correct_number_of_days(self, mock_generate_roadmap, eval_case):
         """Deterministic check: the 'daily_plans' array must have exactly the requested length."""
         expected_days = eval_case.metadata.get("expected_days", 0)
         
-        # In testing, we must mock the db parameter for generate_roadmap 
-        # but call_master_planner doesn't pass db currently, wait, we patched the chain so db query won't crash if it works.
+        from app.schemas.planner_schemas import JourneyRoadmap, DailyPlanItem
+        # The exact mock logic requested by the user
+        mock_generate_roadmap.return_value = JourneyRoadmap(
+            journey_title="Mock Journey",
+            overview="Mock Overview",
+            daily_plans=[DailyPlanItem(
+                day_number=i+1, title=f"Day {i+1}", concepts_to_cover=["A"], difficulty="Beginner", recommended_problem_tags=[]
+            ) for i in range(expected_days)]
+        )
+        
         response = await call_master_planner(eval_case.user_input, expected_days)
         result = validate_planner_structure(response, expected_days)
 
@@ -341,12 +330,17 @@ class TestMasterPlannerEvals:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("eval_case", PLANNER_EVAL_CASES, ids=[c.case_id for c in PLANNER_EVAL_CASES])
-    async def test_planner_logical_progression_schema_validation(self, eval_case):
+    @patch("tests.agents.test_agent_evals.generate_roadmap")
+    async def test_planner_logical_progression_schema_validation(self, mock_generate_roadmap, eval_case):
         """Deterministic Pydantic Check: Replaces LLM-as-a-Judge for logical structure."""
         expected_days = eval_case.metadata.get("expected_days", 0)
-        # Assuming our prompt gets to Ollama or is mocked. For robust CI, we test that the response string parses to JourneyRoadmap.
-        # If running without LLM, this might fail unless mocked, but we'll try to parse it.
-        # But we must validate against Pydantic schema as requested.
+        
+        from app.schemas.planner_schemas import JourneyRoadmap, DailyPlanItem
+        mock_generate_roadmap.return_value = JourneyRoadmap(
+            journey_title="Mock", overview="Mock", 
+            daily_plans=[DailyPlanItem(day_number=i+1, title="M", concepts_to_cover=["A"], difficulty="Beginner", recommended_problem_tags=[]) for i in range(expected_days)]
+        )
+        
         response_str = await call_master_planner(eval_case.user_input, expected_days)
         
         # Test it parses correctly into Pydantic
@@ -367,15 +361,18 @@ class TestMasterPlannerEvals:
         except Exception as e:
             pytest.fail(f"Schema validation failed: {str(e)}")
 
-
     @pytest.mark.asyncio
     @pytest.mark.parametrize("eval_case", PLANNER_EVAL_CASES, ids=[c.case_id for c in PLANNER_EVAL_CASES])
     @pytest.mark.skipif(os.getenv("LARRY_EVAL_MODE") != "live", reason="Skipping live LLM evals in CI")
-    async def test_planner_logical_progression(self, eval_case):
+    @patch("tests.agents.test_agent_evals.generate_roadmap")
+    async def test_planner_logical_progression(self, mock_generate_roadmap, eval_case):
         """LLM Judge check: topics must be logically ordered for the target skill level."""
         expected_days = eval_case.metadata.get("expected_days", 0)
-        # For live test, we wouldn't want the mock, but the mock is auto-used. 
-        # Actually, if LARRY_EVAL_MODE is live, we should probably unmock it, but this is fine for now.
+        from app.schemas.planner_schemas import JourneyRoadmap, DailyPlanItem
+        mock_generate_roadmap.return_value = JourneyRoadmap(
+            journey_title="Mock", overview="Mock", 
+            daily_plans=[DailyPlanItem(day_number=i+1, title="M", concepts_to_cover=["A"], difficulty="Beginner", recommended_problem_tags=[]) for i in range(expected_days)]
+        )
         response = await call_master_planner(eval_case.user_input, expected_days)
         score = judge_response(eval_case, response)
 
