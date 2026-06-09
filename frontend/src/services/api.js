@@ -75,7 +75,6 @@ export const journeyAPI = {
   generate: (prompt, targetDays) =>
     api.post('/journeys/generate', { prompt, target_days: targetDays }),
   exportPdf: (id) => api.get(`/journeys/${id}/export-pdf`, { responseType: 'blob' }),
-  updateDifficulty: (id, difficulty) => api.put(`/journeys/${id}/difficulty`, { difficulty }),
 };
 
 // ── Daily Plan API ────────────────────────────────────────────────────────────

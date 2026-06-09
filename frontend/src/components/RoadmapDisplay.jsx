@@ -33,6 +33,22 @@ const RoadmapDisplay = () => {
     }
   }, [journeyId]);
 
+  const handleGenerate = async (planId) => {
+    setGeneratingIds(prev => new Set(prev).add(planId));
+    try {
+      const response = await dailyPlanAPI.generateContent(planId);
+      setPlans(prev => prev.map(p => p.id === planId ? response.data : p));
+    } catch (e) {
+      console.error("Failed to generate content", e);
+    } finally {
+      setGeneratingIds(prev => {
+        const next = new Set(prev);
+        next.delete(planId);
+        return next;
+      });
+    }
+  };
+
   const handleStartLesson = (plan) => {
     navigate(`/workspace/${plan.id}`);
   };
@@ -75,19 +91,6 @@ const RoadmapDisplay = () => {
         next.delete(planId);
         return next;
       });
-    }
-  };
-
-  const handleDifficultyChange = async (newDifficulty) => {
-    try {
-      const res = await journeyAPI.updateDifficulty(journeyId, newDifficulty);
-      setRoadmap(res.data);
-      if (res.data.daily_plans) {
-        setPlans([...res.data.daily_plans].sort((a, b) => a.day_number - b.day_number));
-      }
-    } catch (e) {
-      console.error("Failed to update difficulty", e);
-      alert("Failed to update difficulty.");
     }
   };
 
@@ -177,21 +180,15 @@ const RoadmapDisplay = () => {
                   Day {plan.day_number}: {plan.title}
                 </h3>
                 <div className="flex items-center gap-2">
-                  <select 
-                    value={plan.difficulty} 
-                    onChange={(e) => handleDifficultyChange(e.target.value)}
-                    className={`text-xs px-2 py-0.5 rounded-full font-medium outline-none cursor-pointer appearance-none ${
-                      plan.difficulty === 'Beginner'
-                        ? 'bg-green-500/15 text-green-400 border border-green-500/30'
-                        : plan.difficulty === 'Intermediate'
-                        ? 'bg-yellow-500/15 text-yellow-400 border border-yellow-500/30'
-                        : 'bg-red-500/15 text-red-400 border border-red-500/30'
-                    }`}
-                  >
-                    <option className="bg-slate-900 text-green-400" value="Beginner">Beginner</option>
-                    <option className="bg-slate-900 text-yellow-400" value="Intermediate">Intermediate</option>
-                    <option className="bg-slate-900 text-red-400" value="Advanced">Advanced</option>
-                  </select>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    plan.difficulty === 'Beginner'
+                      ? 'bg-green-500/15 text-green-400'
+                      : plan.difficulty === 'Intermediate'
+                      ? 'bg-yellow-500/15 text-yellow-400'
+                      : 'bg-red-500/15 text-red-400'
+                  }`}>
+                    {plan.difficulty}
+                  </span>
                   <Calendar size={16} className="text-slate-500" />
                 </div>
               </div>
@@ -212,6 +209,14 @@ const RoadmapDisplay = () => {
               )}
               {/* Actions */}
               <div className="mt-5 flex justify-end gap-3 border-t border-slate-800/50 pt-4">
+                {(plan.content_status === 'COMPLETED' || plan.theoretical_topic_content) ? (
+                  <>
+                    <button 
+                      onClick={() => handleStartLesson(plan)} 
+                      className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2"
+                    >
+                      <Play size={16} /> Start Lesson
+                    </button>
                     {plan.completion_status ? (
                       <button 
                         disabled 
@@ -220,26 +225,28 @@ const RoadmapDisplay = () => {
                         <CheckCircle2 size={16} /> Completed
                       </button>
                     ) : (
-                      <div className="flex justify-end gap-3">
-                        <button 
-                          onClick={() => handleStartLesson(plan)} 
-                          className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2"
-                        >
-                        <Play size={16} /> Start Lesson
-                        </button>
-                        
-                        <button 
-                          onClick={() => handleMarkCompleted(plan.id)}
-                          disabled={completingIds.has(plan.id)}
-                          className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 disabled:opacity-50"
-                        >
-                          {completingIds.has(plan.id) ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} 
-                          Mark as Completed
-                        </button>
-                      </div>
-                      
+                      <button 
+                        onClick={() => handleMarkCompleted(plan.id)}
+                        disabled={completingIds.has(plan.id)}
+                        className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 disabled:opacity-50"
+                      >
+                        {completingIds.has(plan.id) ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} 
+                        Mark as Completed
+                      </button>
                     )}
-
+                  </>
+                ) : (generatingIds.has(plan.id) || plan.content_status === 'GENERATING') ? (
+                  <button disabled className="bg-slate-800 text-slate-400 border border-slate-700 px-5 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 cursor-not-allowed">
+                    <Loader2 size={16} className="animate-spin" /> Generating...
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => handleGenerate(plan.id)} 
+                    className="bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-5 py-2 rounded-lg text-sm font-semibold transition-colors"
+                  >
+                    Generate Lesson
+                  </button>
+                )}
               </div>
             </div>
           </motion.div>

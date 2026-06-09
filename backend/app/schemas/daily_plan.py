@@ -6,32 +6,23 @@ class DailyPlanBase(BaseModel):
     title: str
     concepts_to_cover: List[str]
     difficulty: str
-    theoretical_topic_content: Optional[str] = ''
+    theoretical_topic_content: Optional[str] = None
     completion_status: bool = False
     content_status: str = "PENDING"
-    recommended_problem_tags: Optional[List[str]] = []
+    recommended_problem_tags: Optional[List[str]] = None
 
 class DailyPlanCreate(DailyPlanBase):
     journey_id: int
 
 class DailyPlanUpdate(BaseModel):
-    theoretical_topic_content: Optional[str] = ''
-    completion_status: bool = False
-    content_status: str = "PENDING"
+    theoretical_topic_content: Optional[str] = None
+    completion_status: Optional[bool] = None
 
 class DailyPlanResponse(DailyPlanBase):
     id: int
     journey_id: int
-    day_number: int
-    title: str
-    concepts_to_cover: List[str]
-    difficulty: str
+
     model_config = ConfigDict(from_attributes=True)
-    
-    recommended_problem_tags: Optional[List[str]] = []
-    theoretical_topic_content: Optional[str] = ''
-    completion_status: bool
-    content_status: str
 
 # Schema for the AI Master Planner to ensure structured output
 class PlannerDayOutput(BaseModel):

@@ -52,7 +52,7 @@ async def main():
     
     chroma_client = chromadb.HttpClient(host=chroma_host, port=chroma_port)
     
-    embedding_model_name = os.getenv("VERTEX_EMBEDDING_MODEL", "text-embedding-004")
+    embedding_model_name = os.getenv("VERTEX_EMBEDDING_MODEL", "gemini-embedding-001")
     embeddings = GoogleGenerativeAIEmbeddings(model_name=embedding_model_name)
     
     vectorstore = Chroma(

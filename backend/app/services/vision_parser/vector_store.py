@@ -1,7 +1,7 @@
 import os
 import chromadb
 
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_google_vertexai import VertexAIEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
 from typing import List
@@ -18,9 +18,9 @@ async def store_chunks_in_chroma(chunks: List[Document], original_filename: str)
     # Initialize the HTTP Client
     chroma_client = chromadb.HttpClient(host=chroma_host, port=chroma_port)
     
-    # Initialize Google Embeddings (e.g., text-embedding-004)
-    embedding_model_name = os.getenv("VERTEX_EMBEDDING_MODEL", "text-embedding-004")
-    embeddings = GoogleGenerativeAIEmbeddings(model_name=embedding_model_name)
+    # Initialize Google Embeddings (e.g., gemini-embedding-001)
+    embedding_model_name = os.getenv("VERTEX_EMBEDDING_MODEL", "gemini-embedding-001")
+    embeddings = VertexAIEmbeddings(model_name=embedding_model_name)
     
     # Inject source filename into metadata
     for chunk in chunks:
