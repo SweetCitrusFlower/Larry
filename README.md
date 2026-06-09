@@ -37,3 +37,29 @@ sequenceDiagram
     B-->>N: 200 OK + Datele Roadmap-ului
     N-->>F: Forward raspuns
     F-->>U: Randeaza interfata grafic
+
+
+graph TD
+    User((Utilizator Browser))
+    
+    subgraph Docker Compose Environment
+        Nginx[Nginx Container Port 80]
+        React[React Frontend Static Files]
+        FastAPI[FastAPI Backend Port 8000]
+        Ollama[Ollama Container Port 11434]
+        Judge0[Judge0 Code Runner Port 2358]
+        Postgres[(PostgreSQL DB Port 5432)]
+        Redis[(Redis Cache)]
+    end
+
+    User -- HTTP --> Nginx
+    Nginx -- Serveste UI --> React
+    Nginx -- Proxy API --> FastAPI
+    
+    FastAPI -- LangChain --> Ollama
+    FastAPI -- HTTP REST --> Judge0
+    FastAPI -- SQLAlchemy --> Postgres
+    FastAPI -- Sesiuni RateLimit --> Redis
+    
+    classDef ai fill:#f9d0c4,stroke:#333,stroke-width:2px;
+    class Ollama ai;
