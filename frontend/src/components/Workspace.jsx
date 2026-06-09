@@ -72,19 +72,16 @@ const Workspace = () => {
         return;
       }
       try {
-        // Fetch the generated code
-        const res = await demoAPI.solveTask(task.description);
+        // Fetch the generated code, providing the starter code as context
+        const res = await demoAPI.solveTask(task.description, task.starter_code);
         const generatedCode = res.data.code;
         
-        let currentString = code;
-        if (currentString.length > 0) {
-          currentString += '\n\n';
-        }
+        // Clear the editor so we can type the full code from scratch
+        setCode('');
         
         let i = 0;
         typeInterval = setInterval(() => {
-          currentString += generatedCode.charAt(i);
-          setCode(currentString);
+          setCode(prev => prev + generatedCode.charAt(i));
           i++;
           if (i >= generatedCode.length) {
             clearInterval(typeInterval);
@@ -120,7 +117,7 @@ const Workspace = () => {
       unsubSubmit();
       unsubReturn();
     };
-  }, [task, code]);
+  }, [task]);
 
   const handleSubmit = async () => {
     if (!task) return;

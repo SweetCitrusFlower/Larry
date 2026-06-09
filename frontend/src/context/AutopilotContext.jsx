@@ -41,15 +41,15 @@ export const AutopilotProvider = ({ children }) => {
   ];
 
   // Helper function to poll the DOM until a specific element is rendered
-  const waitForElement = (selector, timeout = 30000) => {
+  const waitForElement = (selector, timeout = 120000, context = document) => {
     return new Promise((resolve, reject) => {
-      if (document.querySelector(selector)) {
-        return resolve(document.querySelector(selector));
+      if (context.querySelector(selector)) {
+        return resolve(context.querySelector(selector));
       }
 
       const observer = new MutationObserver((mutations) => {
-        if (document.querySelector(selector)) {
-          resolve(document.querySelector(selector));
+        if (context.querySelector(selector)) {
+          resolve(context.querySelector(selector));
           observer.disconnect();
         }
       });
@@ -109,7 +109,7 @@ export const AutopilotProvider = ({ children }) => {
         // Step 3: Wait for roadmap generation and navigation
         console.log("[Ghost Mode] Step 3: Waiting for roadmap generation and navigation");
         // ChatPane automatically navigates to /journey/:id upon success
-        await waitForElement('.ghost-daily-plan', 30000);
+        await waitForElement('.ghost-daily-plan', 120000);
         
         // Wait a moment so the user can see the generated roadmap
         await sleep(2000);
@@ -161,8 +161,8 @@ export const AutopilotProvider = ({ children }) => {
 
           if (actionType === 'GENERATE') {
              btnToClick.click();
-             // Wait for it to turn into a Start Lesson button
-             await waitForElement('.ghost-start-lesson-btn', 60000); // Generation can take a while
+             // Wait for it to turn into a Start Lesson button within THIS specific plan
+             await waitForElement('.ghost-start-lesson-btn', 120000, planToWorkOn); // Generation can take a while
              await sleep(1000);
              // Re-query the button inside this plan
              btnToClick = planToWorkOn.querySelector('.ghost-start-lesson-btn');

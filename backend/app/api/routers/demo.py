@@ -61,8 +61,11 @@ async def stream_demo():
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
+from typing import Optional
+
 class SolveTaskRequest(BaseModel):
     task_description: str
+    starter_code: Optional[str] = None
 
 @router.post("/solve-task")
 async def solve_task(req: SolveTaskRequest):
@@ -70,16 +73,17 @@ async def solve_task(req: SolveTaskRequest):
     Endpoint for the Visual Ghost Mode frontend orchestrator to get the code 
     to type out, acting as the 'brain'.
     """
-    prompt = f"Write ONLY valid Python code to solve the following task. No markdown blocks, no explanations, just the raw code.\nTask: {req.task_description}"
+    if req.starter_code and req.starter_code.strip():
+        prompt = f"Write ONLY valid Python code to solve the following task. You MUST use and complete the provided starter code. Do not change the function signature if one is provided. No markdown blocks, no explanations, just the raw code.\n\nTask: {req.task_description}\n\nStarter Code:\n{req.starter_code}"
+    else:
+        prompt = f"Write ONLY valid Python code to solve the following task. No markdown blocks, no explanations, just the raw code.\nTask: {req.task_description}"
     
     try:
-        # Try Qwen first
-        llm = ChatOllama(model="qwen2.5-coder:3b", temperature=0.2)
-        response = await llm.ainvoke(prompt)
-    except Exception as e:
-        # Fallback to Gemini
+        # Use Gemini 2.5 Pro as requested
         llm = ChatVertexAI(model="gemini-2.5-pro", temperature=0.2)
         response = await llm.ainvoke(prompt)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
         
     code = response.content.strip()
     # Clean up markdown blocks if present

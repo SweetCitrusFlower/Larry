@@ -129,7 +129,7 @@ export const favoritesAPI = {
 // ── Demo API ────────────────────────────────────────────────────────
 export const demoAPI = {
   startDemo: () => api.post('/demo/start'),
-  solveTask: (taskDescription) => api.post('/demo/solve-task', { task_description: taskDescription })
+  solveTask: (taskDescription, starterCode = null) => api.post('/demo/solve-task', { task_description: taskDescription, starter_code: starterCode })
 };
 
 export const journeysAPI = {
