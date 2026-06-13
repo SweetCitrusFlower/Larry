@@ -4,6 +4,7 @@ import { Send, Sparkles, Loader2, User, Bot, Paperclip } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import { autopilotBus } from '../context/AutopilotContext';
+import SimilarityModal from './SimilarityModal';
 
 const ChatPane = () => {
   const [messages, setMessages] = useState([]);
@@ -11,6 +12,10 @@ const ChatPane = () => {
   const [days, setDays] = useState(7);
   const [loading, setLoading] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [showSimilarityModal, setShowSimilarityModal] = useState(false);
+  const [similarJourney, setSimilarJourney] = useState(null);
+  const [pendingPrompt, setPendingPrompt] = useState('');
+  const [pendingDays, setPendingDays] = useState(7);
   const scrollRef = useRef(null);
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
@@ -119,14 +124,26 @@ const ChatPane = () => {
          await chatAPI.sendMessage(assistantResponse, 'assistant', null, journey.id);
          autopilotBus.emit('JOURNEY_MODIFIED');
       } else {
-         // 2. Call the journey generation endpoint
+         console.log(`[Similarity Interceptor] Checking similarity for prompt: "${savedInput}", days: ${savedDays}`);
+         const similarityResponse = await journeyAPI.checkSimilarity(savedInput, savedDays);
+
+         if (similarityResponse.status === 200 && similarityResponse.data && similarityResponse.data.score >= 80) {
+            console.log(`[Similarity Interceptor] MATCH FOUND! Score: ${similarityResponse.data.score}`);
+            setSimilarJourney(similarityResponse.data);
+            setPendingPrompt(savedInput);
+            setPendingDays(savedDays);
+            setShowSimilarityModal(true);
+            setLoading(false);
+            return;
+         }
+
+         // Call the journey generation endpoint
          const response = await journeyAPI.generate(savedInput, savedDays);
          const journey = response.data;
 
          const assistantResponse = `Great! I've generated your ${journey.journey_title} roadmap. Check it out on the right.`;
          pushMessage('assistant', assistantResponse);
          
-         // Persist the initial user prompt and assistant response linked to the new journey
          await chatAPI.sendMessage(savedInput, 'user', null, journey.id);
          await chatAPI.sendMessage(assistantResponse, 'assistant', null, journey.id);
 
@@ -138,6 +155,50 @@ const ChatPane = () => {
       pushMessage('assistant', detail);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUseExisting = async () => {
+    try {
+      setLoading(true);
+      const response = await journeyAPI.clone(similarJourney.journey.id, pendingPrompt);
+      const journey = response.data;
+
+      const assistantResponse = `I've instantly prepared the ${journey.journey_title} roadmap for you based on an existing template! Check it out on the right.`;
+      pushMessage('assistant', assistantResponse);
+      
+      await chatAPI.sendMessage(pendingPrompt, 'user', null, journey.id);
+      await chatAPI.sendMessage(assistantResponse, 'assistant', null, journey.id);
+
+      navigate(`/journey/${journey.id}`);
+    } catch (err) {
+      const detail = err.response?.data?.detail || 'Sorry, failed to clone the journey.';
+      pushMessage('assistant', detail);
+    } finally {
+      setLoading(false);
+      setShowSimilarityModal(false);
+    }
+  };
+
+  const handleForceGenerate = async () => {
+    try {
+      setLoading(true);
+      const response = await journeyAPI.generate(pendingPrompt, pendingDays);
+      const journey = response.data;
+
+      const assistantResponse = `Great! I've generated your ${journey.journey_title} roadmap. Check it out on the right.`;
+      pushMessage('assistant', assistantResponse);
+      
+      await chatAPI.sendMessage(pendingPrompt, 'user', null, journey.id);
+      await chatAPI.sendMessage(assistantResponse, 'assistant', null, journey.id);
+
+      navigate(`/journey/${journey.id}`);
+    } catch (err) {
+      const detail = err.response?.data?.detail || 'Sorry, I encountered an error. Please try again.';
+      pushMessage('assistant', detail);
+    } finally {
+      setLoading(false);
+      setShowSimilarityModal(false);
     }
   };
 
@@ -227,6 +288,18 @@ const ChatPane = () => {
           </div>
         )}
       </div>
+
+      <SimilarityModal 
+        isOpen={showSimilarityModal}
+        onClose={() => {
+            setShowSimilarityModal(false);
+            setLoading(false);
+        }}
+        similarJourney={similarJourney}
+        onUseExisting={handleUseExisting}
+        onForceGenerate={handleForceGenerate}
+        loading={loading}
+      />
 
       <div className="p-4 border-t border-slate-800 bg-slate-900/50 shrink-0">
         <div className="flex items-center gap-2 mb-3">

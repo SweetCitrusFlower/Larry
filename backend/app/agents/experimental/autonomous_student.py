@@ -23,6 +23,7 @@ class StudentState(TypedDict):
     journey_id: Optional[int]
     task_id: Optional[int]
     task_description: str
+    starter_code: Optional[str]
     current_code: Optional[str]
     retrieved_memories: List[str]
     execution_status: str
@@ -43,8 +44,20 @@ collection = chroma_client.get_or_create_collection(name="demo_student_memories"
 # ==========================================
 # 3. Models
 # ==========================================
-primary_llm = ChatOllama(model="qwen2.5-coder:3b", temperature=0.2)
-fallback_llm = ChatVertexAI(model="gemini-2.5-pro", temperature=0.2)
+primary_llm = None
+fallback_llm = None
+
+def get_llm(is_fallback: bool = False):
+    global primary_llm, fallback_llm
+    if is_fallback:
+        if fallback_llm is None:
+            fallback_llm = ChatVertexAI(model="gemini-2.5-pro", project="project-43919676-77f2-42ed-8b8", temperature=0.2)
+        return fallback_llm
+    else:
+        if primary_llm is None:
+            # We use Gemini 2.5 Pro for primary as well to fulfill user's Ghost Mode request
+            primary_llm = ChatVertexAI(model="gemini-2.5-pro", project="project-43919676-77f2-42ed-8b8", temperature=0.2)
+        return primary_llm
 
 async def _notify(state: StudentState, event_type: str, data: str):
     await state["queue"].put({"event": event_type, "data": data})
@@ -76,13 +89,16 @@ async def retrieve_memory(state: StudentState) -> StudentState:
 
 async def write_code(state: StudentState) -> StudentState:
     attempt = state.get("attempt_count", 0) + 1
-    llm = fallback_llm if state.get("use_fallback_llm") else primary_llm
-    model_name = "Gemini 2.5 Pro (Fallback)" if state.get("use_fallback_llm") else "Qwen2.5-Coder"
+    llm = get_llm(state.get("use_fallback_llm"))
+    model_name = "Gemini 2.5 Pro (Fallback)" if state.get("use_fallback_llm") else "Gemini 2.5 Pro"
     
     await _notify(state, "coding", f"Attempt #{attempt}: Generating code using {model_name}...")
     
+    starter_code_section = f"\n\nStarter Code:\n{state.get('starter_code')}\n\nYou MUST use and complete this starter code. Do not change the function signature." if state.get("starter_code") else ""
+
     prompt = f"""You are a student writing Python code to solve the following task:
 Task: {state['task_description']}
+{starter_code_section}
 
 Here are some things you learned from past mistakes (DO NOT repeat these mistakes):
 {state['retrieved_memories']}
@@ -332,9 +348,10 @@ async def run_demo_student(user_id: int, queue: asyncio.Queue):
                 task = resp.json()
             else:
                 task = tasks[0]
-                
+            
             task_id = task["id"]
             task_desc = task["description"]
+            starter_code = task.get("starter_code")
             await queue.put({"event": "system", "data": f"🎯 Selected Task: '{task['title']}'"})
             
             # 3. Enter the LangGraph Loop
@@ -346,6 +363,7 @@ async def run_demo_student(user_id: int, queue: asyncio.Queue):
                 "journey_id": journey_id,
                 "task_id": task_id,
                 "task_description": task_desc,
+                "starter_code": starter_code,
                 "attempt_count": 0,
                 "use_fallback_llm": False
             }
