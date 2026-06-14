@@ -6,7 +6,7 @@ import os
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/tmp/adc.json"
 
 async def main():
-    embeddings = VertexAIEmbeddings(model="text-embedding-004", project="project-43919676-77f2-42ed-8b8")
+    embeddings = VertexAIEmbeddings(model="text-embedding-004", project=os.getenv("GOOGLE_CLOUD_PROJECT"))
     
     emb1 = np.array(await embeddings.aembed_query("i want to learn python"))
     emb2 = np.array(await embeddings.aembed_query("I am interested in learning the amazing python programming language"))

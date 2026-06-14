@@ -51,12 +51,12 @@ def get_llm(is_fallback: bool = False):
     global primary_llm, fallback_llm
     if is_fallback:
         if fallback_llm is None:
-            fallback_llm = ChatVertexAI(model="gemini-2.5-pro", project="project-43919676-77f2-42ed-8b8", temperature=0.2)
+            fallback_llm = ChatVertexAI(model="gemini-2.5-pro", project=os.getenv("GOOGLE_CLOUD_PROJECT"), temperature=0.2)
         return fallback_llm
     else:
         if primary_llm is None:
             # We use Gemini 2.5 Pro for primary as well to fulfill user's Ghost Mode request
-            primary_llm = ChatVertexAI(model="gemini-2.5-pro", project="project-43919676-77f2-42ed-8b8", temperature=0.2)
+            primary_llm = ChatVertexAI(model="gemini-2.5-pro", project=os.getenv("GOOGLE_CLOUD_PROJECT"), temperature=0.2)
         return primary_llm
 
 async def _notify(state: StudentState, event_type: str, data: str):
