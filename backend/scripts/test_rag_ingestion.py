@@ -3,7 +3,7 @@ import os
 import asyncio
 import chromadb
 from langchain_community.vectorstores import Chroma
-from langchain_google_vertexai import VertexAIEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 # Add backend directory to sys.path so we can import app modules
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -52,8 +52,8 @@ async def main():
     
     chroma_client = chromadb.HttpClient(host=chroma_host, port=chroma_port)
     
-    embedding_model_name = os.getenv("VERTEX_EMBEDDING_MODEL", "text-embedding-004")
-    embeddings = VertexAIEmbeddings(model_name=embedding_model_name)
+    embedding_model_name = os.getenv("VERTEX_EMBEDDING_MODEL", "gemini-embedding-001")
+    embeddings = GoogleGenerativeAIEmbeddings(model_name=embedding_model_name)
     
     vectorstore = Chroma(
         client=chroma_client,

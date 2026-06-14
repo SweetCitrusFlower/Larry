@@ -134,6 +134,7 @@ export default function App() {
                   <Route path="/workspace/:dailyPlanId" element={<Workspace />} />
                   <Route path="/submissions" element={<Submissions />} />
                   <Route path="/materials" element={<MaterialExplorer />} />
+                  <Route path="/statistics" element={<StatisticsDashboard />} />
                   <Route path="/student-demo" element={<DemoPage />} />
                   <Route path="/statistics" element={<StatisticsDashboard />} />
                 </>

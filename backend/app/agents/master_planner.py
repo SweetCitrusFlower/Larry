@@ -1,7 +1,7 @@
 import os
 from typing import Optional
 # 1. Am schimbat importul de la Google la Ollama
-from langchain_community.chat_models import ChatOllama 
+from langchain_ollama import ChatOllama 
 from langchain_core.prompts import ChatPromptTemplate
 from sqlalchemy.orm import Session
 from app.schemas.planner_schemas import JourneyRoadmap
