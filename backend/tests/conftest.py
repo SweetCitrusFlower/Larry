@@ -37,7 +37,17 @@ from unittest.mock import MagicMock
 sys.modules['weasyprint'] = MagicMock()
 if not LIVE_EVALS:
     sys.modules['langchain_ollama'] = MagicMock()
-    sys.modules['langchain_google_vertexai'] = MagicMock()
+    
+    # Create a proper mock for VertexAI to support async embedding
+    from unittest.mock import AsyncMock
+    mock_vertexai = MagicMock()
+    mock_embeddings_class = MagicMock()
+    mock_embeddings_instance = MagicMock()
+    mock_embeddings_instance.aembed_query = AsyncMock(return_value=[0.1] * 768)
+    mock_embeddings_class.return_value = mock_embeddings_instance
+    mock_vertexai.VertexAIEmbeddings = mock_embeddings_class
+    
+    sys.modules['langchain_google_vertexai'] = mock_vertexai
 sys.modules['langchain_chroma'] = MagicMock()
 sys.modules['chromadb'] = MagicMock()
 

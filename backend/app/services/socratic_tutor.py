@@ -11,8 +11,9 @@ FALLBACK_RESPONSE = "Could you review how the concepts in your reference materia
 
 # Regex pattern to detect:
 # 1. Markdown code blocks: ```...```
-# 3. Common code keywords: def, class
-CODE_REGEX = re.compile(r'(```[\s\S]*?```|\bdef\s+\w+\b|\bclass\s+\w+\b)', re.IGNORECASE)
+# 2. Inline code: `...`
+# 3. Common code keywords: def, class, function
+CODE_REGEX = re.compile(r'(```[\s\S]*?```|`[^`]+`|\bdef\s+\w+\b|\bclass\s+\w+\b|\bfunction\b)', re.IGNORECASE)
 
 def detect_code_leakage(text: str) -> bool:
     """
