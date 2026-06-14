@@ -1,4 +1,5 @@
 import re
+import os
 import logging
 from langchain_google_vertexai import ChatVertexAI
 from langchain_core.prompts import ChatPromptTemplate
@@ -10,9 +11,8 @@ FALLBACK_RESPONSE = "Could you review how the concepts in your reference materia
 
 # Regex pattern to detect:
 # 1. Markdown code blocks: ```...```
-# 2. Inline code: `...`
-# 3. Common code keywords: def, class, function
-CODE_REGEX = re.compile(r'(```[\s\S]*?```|`[^`]+`|\bdef\s+\w+\b|\bclass\s+\w+\b|\bfunction\s+\w+\b)', re.IGNORECASE)
+# 3. Common code keywords: def, class
+CODE_REGEX = re.compile(r'(```[\s\S]*?```|\bdef\s+\w+\b|\bclass\s+\w+\b)', re.IGNORECASE)
 
 def detect_code_leakage(text: str) -> bool:
     """
@@ -29,6 +29,7 @@ async def get_socratic_hint(user_query: str, rag_context: str) -> str:
     """
     llm = ChatVertexAI(
         model="gemini-2.5-pro",
+        project=os.getenv("GOOGLE_CLOUD_PROJECT"),
         temperature=0.2  # Keep it focused
     )
     
