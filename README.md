@@ -60,9 +60,6 @@ graph TD
     FastAPI -- HTTP REST --> Judge0
     FastAPI -- SQLAlchemy --> Postgres
     FastAPI -- Sesiuni RateLimit --> Redis
-    
-    classDef ai fill:#f9d0c4,stroke:#333,stroke-width:2px;
-    class Ollama ai;
 ```
 
 # Entity-Relationship Diagram (ERD)
