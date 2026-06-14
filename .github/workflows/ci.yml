@@ -1,0 +1,38 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - 'refactor/*'
+  pull_request:
+    branches:
+      - main
+      - 'refactor/*'
+
+jobs:
+  test:
+    name: Backend Tests (Mocked LLMs)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Run Pytest (Offline / Mock Mode)
+        # We do NOT pass --live-evals, meaning all Vertex AI calls are mocked automatically by conftest.py
+        # No GCP credentials are required, saving cost and running instantly.
+        run: |
+          cd backend
+          pytest tests/
