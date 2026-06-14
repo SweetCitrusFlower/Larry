@@ -21,14 +21,14 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
         const response = await authAPI.login({ email: formData.email, password: formData.password });
         localStorage.setItem('token', response.data.access_token);
         onAuthSuccess();
-        onClose();
       } else {
         if (formData.password !== formData.confirmPassword) {
           throw new Error('Passwords do not match');
         }
         await authAPI.register({ email: formData.email, password: formData.password });
-        setIsLogin(true);
-        setError('Account created! Please login.');
+        const response = await authAPI.login({ email: formData.email, password: formData.password });
+        localStorage.setItem('token', response.data.access_token);
+        onAuthSuccess();
       }
     } catch (err) {
       setError(err.response?.data?.detail || err.message || 'Something went wrong');

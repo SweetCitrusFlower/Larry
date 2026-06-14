@@ -127,7 +127,7 @@ export const knowledgeSourceAPI = {
 
 // ── Favorites API ─────────────────────────────────────────────────────────────
 export const favoritesAPI = {
-  addFavorite: (sourceId) => api.post(`/favorites/`, { knowledge_source_id: sourceId }),
+  addFavorite: (data) => api.post(`/favorites/`, data),
   removeFavorite: (sourceId) => api.delete(`/favorites/${sourceId}`),
   getFavorites: (skip = 0, limit = 100) => api.get(`/favorites/?skip=${skip}&limit=${limit}`)
 };

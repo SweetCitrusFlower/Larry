@@ -4,14 +4,7 @@ import Joyride, { STATUS } from 'react-joyride';
 const TourGuide = forwardRef((props, ref) => {
   const [run, setRun] = useState(false);
 
-  useEffect(() => {
-    // Check local storage to see if the user has already seen the tour
-    const hasSeenTour = localStorage.getItem('hasSeenTour');
-    if (!hasSeenTour) {
-      setRun(true);
-    }
-  }, []);
-
+  // Auto-start logic removed so that App.jsx cleanly triggers it when ready
   // Expose a method to manually restart the tour from the parent component
   useImperativeHandle(ref, () => ({
     startTour: () => {
