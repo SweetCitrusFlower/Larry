@@ -55,6 +55,15 @@ export default function App() {
   useEffect(() => {
     if (!isAuthenticated) {
       setIsAuthModalOpen(true);
+    } else {
+      // If they just authenticated, trigger the tour if they haven't seen it
+      const hasSeenTour = localStorage.getItem('hasSeenTour');
+      if (!hasSeenTour) {
+        // Small delay ensures Sidebar and ChatPane are fully mounted into the DOM
+        setTimeout(() => {
+          if (tourRef.current) tourRef.current.startTour();
+        }, 500);
+      }
     }
   }, [isAuthenticated]);
 
@@ -71,7 +80,7 @@ export default function App() {
 
   return (
     <FavoritesProvider isAuthenticated={isAuthenticated}>
-      <TourGuide ref={tourRef} />
+      {isAuthenticated && <TourGuide ref={tourRef} />}
       <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col font-sans h-screen overflow-hidden">
       {/* Header */}
       <header className="h-16 border-b border-slate-800 bg-slate-950/50 backdrop-blur-md flex items-center justify-between px-8 shrink-0 z-40">
@@ -164,13 +173,6 @@ export default function App() {
         onAuthSuccess={() => {
           setIsAuthenticated(true);
           setIsAuthModalOpen(false);
-          
-          // Trigger tutorial only on first sign-up/login
-          const hasSeenTutorial = localStorage.getItem('hasSeenTutorial');
-          if (!hasSeenTutorial && tourRef.current) {
-            localStorage.setItem('hasSeenTutorial', 'true');
-            tourRef.current.startTour();
-          }
         }}
       />
       
