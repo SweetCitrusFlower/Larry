@@ -74,12 +74,25 @@ erDiagram
     USER ||--o{ USER_SUBMISSION : submits
     TASK ||--o{ USER_SUBMISSION : evaluates
 
+    USER {
+        int id PK
+        string email
+        string password_hash
+        string first_name
+        string last_name
+        string profile_picture_url
+        datetime created_at
+        datetime last_login
+        bool is_active
+    }
+
     JOURNEY {
         int id PK
         string original_prompt
         string journey_title
         string overview
         datetime created_at
+        int user_id FK
     }
 
     DAILY_PLAN {
@@ -92,6 +105,14 @@ erDiagram
         string rag_context_payload
         bool completion_status
         int journey_id FK
+    }
+    
+    TASK {
+        int id PK
+        string title
+        string description
+        string expected_output
+        int daily_plan_id FK
     }
 
     USER_SUBMISSION {
