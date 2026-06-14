@@ -17,7 +17,7 @@ jobs:
     name: Build & Push to GHCR
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write # Needed to create GitHub Releases
       packages: write # Needed to upload images to GHCR
 
     steps:
@@ -58,3 +58,12 @@ jobs:
           push: true
           tags: ${{ steps.meta-frontend.outputs.tags }}
           labels: ${{ steps.meta-frontend.outputs.labels }}
+
+      - name: Create Automated GitHub Release
+        if: github.ref == 'refs/heads/main'
+        uses: ncipollo/release-action@v1
+        with:
+          tag: v1.0.${{ github.run_number }}
+          name: Release v1.0.${{ github.run_number }}
+          generateReleaseNotes: true
+          token: ${{ secrets.GITHUB_TOKEN }}
