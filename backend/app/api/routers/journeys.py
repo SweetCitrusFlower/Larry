@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Response
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from datetime import datetime
 from app.db.database import get_db
 import markdown
-import weasyprint
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.models.journey import Journey
@@ -24,7 +23,7 @@ router = APIRouter()
 
 # ── Endpoints ──────────────────────────────────────────────────────────────────
 
-from sqlalchemy import select
+
 
 @router.get("/", response_model=List[JourneyResponse])
 def list_journeys(
@@ -98,6 +97,48 @@ async def generate_new_journey(
         )
 
     try:
+        # -- Caching/Reuse check -------------------------------------------------
+        # First, avoid creating duplicate journeys for the same user by
+        # checking whether the requesting user already has a matching
+        # journey (case-insensitive, trimmed prompt + exact target_days).
+        normalized = request.prompt.strip().lower()
+        user_stmt = (
+            select(Journey)
+            .options(joinedload(Journey.daily_plans))
+            .where(func.lower(func.trim(Journey.original_prompt)) == normalized,
+                   Journey.target_days == request.target_days,
+                   Journey.user_id == current_user.id)
+        )
+        user_existing = db.execute(user_stmt).scalars().unique().first()
+        if user_existing:
+            return user_existing
+        # Before invoking the AI pipeline, try to find an equivalent Journey
+        # already present in the database. Equivalence is determined by
+        # case-insensitive, trimmed comparison of the original prompt and an
+        # exact match on `target_days`.
+        #
+        # If an equivalent Journey exists, we avoid re-running the AI model.
+        # To preserve ownership semantics (many endpoints enforce that
+        # `journey.user_id == current_user.id`), we clone the template Journey
+        # and its DailyPlans for the requesting user, resetting completion
+        # statuses so the user sees a fresh journey. This keeps API behavior
+        # unchanged for clients while preventing expensive re-generation.
+        existing = get_equivalent_journey(db, request.prompt, request.target_days)
+        if existing:
+            # Clone and persist a user-owned copy derived from the cached
+            # template. This is a deliberate design choice: returning the
+            # template in-memory without persisting would break downstream
+            # ownership checks (permission enforcement) elsewhere in the API.
+            cloned = clone_journey_for_user(db, existing, current_user.id)
+            journey = (
+                db.query(Journey)
+                .options(joinedload(Journey.daily_plans))
+                .filter(Journey.id == cloned.id)
+                .first()
+            )
+            return journey
+
+        # No cached equivalent found — proceed to generate via AI pipeline
         roadmap = await generate_roadmap(request.prompt, request.target_days, db=db)
         
         # Compute prompt embedding
@@ -366,6 +407,7 @@ def export_journey_pdf(
     """
     Export all completed theoretical lessons for a Journey to a PDF.
     """
+    import weasyprint
     # Fetch journey and order daily plans by day_number
     stmt = (
         select(Journey)

@@ -20,6 +20,16 @@ from sqlalchemy import create_engine, event                   # noqa: E402
 from sqlalchemy.orm import sessionmaker                        # noqa: E402
 from fastapi.testclient import TestClient                      # noqa: E402
 
+import sys
+from unittest.mock import MagicMock
+
+# Mock out heavy and external dependencies to ensure tests run offline
+sys.modules['weasyprint'] = MagicMock()
+sys.modules['langchain_ollama'] = MagicMock()
+sys.modules['langchain_google_vertexai'] = MagicMock()
+sys.modules['langchain_chroma'] = MagicMock()
+sys.modules['chromadb'] = MagicMock()
+
 import app.db.database as db_module                            # noqa: E402
 from app.db.database import Base, get_db                       # noqa: E402
 from app.main import app                                       # noqa: E402

@@ -12,5 +12,6 @@ api_router.include_router(submissions.router, prefix="/submissions", tags=["subm
 api_router.include_router(knowledge_sources.router, prefix="/knowledge-sources", tags=["knowledge_sources"])
 api_router.include_router(chat_messages.router, prefix="/chat-messages", tags=["chat_messages"])
 api_router.include_router(favorites.router, prefix="/favorites", tags=["favorites"])
+api_router.include_router(hints.router, prefix="/hints", tags=["hints"])
 api_router.include_router(demo.router, prefix="/demo", tags=["demo"])
 api_router.include_router(hints.router, prefix="/hints", tags=["hints"])
