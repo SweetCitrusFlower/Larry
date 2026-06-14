@@ -282,6 +282,7 @@ const Workspace = () => {
                     Ask Larry
                   </button>
                   <button 
+                    id="workspace-submit-btn"
                     onClick={handleSubmit} 
                     disabled={submitting || hintLoading || !task}
                     className="bg-green-600 hover:bg-green-500 disabled:bg-slate-700 disabled:text-slate-500 text-white px-5 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-lg flex items-center gap-2"

@@ -7,6 +7,7 @@ from .user_submission import UserSubmission
 from .chat_message import ChatMessage
 from .coding_problem import CodingProblem
 from .favorite import Favorite
+from .hint import Hint
 
 # This file imports all models to be easily accessible from app.models
 # and ensures they are registered with the Base metadata.

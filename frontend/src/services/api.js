@@ -76,6 +76,10 @@ export const journeyAPI = {
   // generate expects { prompt: string, target_days: number }
   generate: (prompt, targetDays) =>
     api.post('/journeys/generate', { prompt, target_days: targetDays }),
+  checkSimilarity: (prompt, targetDays) =>
+    api.post('/journeys/check-similarity', { prompt, target_days: targetDays }),
+  clone: (sourceJourneyId, newPrompt) =>
+    api.post('/journeys/clone', { source_journey_id: sourceJourneyId, new_prompt: newPrompt }),
   modify: (id, prompt) => 
     api.post(`/journeys/${id}/modify`, { prompt }),
   exportPdf: (id) => api.get(`/journeys/${id}/export-pdf`, { responseType: 'blob' }),

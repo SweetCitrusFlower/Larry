@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { journeyAPI } from '../services/api';
-import { Plus, MessageSquare, Map, History, BarChart2, Library, Terminal, Sparkles } from 'lucide-react';
+import { Plus, MessageSquare, Map, History, Library, Terminal, Sparkles, BarChart2 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAutopilot } from '../context/AutopilotContext';
 import { Trash2 } from 'lucide-react';
@@ -72,7 +72,7 @@ const Sidebar = () => {
           <Library size={18} />
           Material Explorer
         </button>
-              <button 
+        <button 
           onClick={() => navigate('/statistics')}
           className={`w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg font-medium transition-colors ${
             location.pathname === '/statistics' 

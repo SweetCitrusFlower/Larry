@@ -5,11 +5,11 @@ services:
     image: postgres:15
     container_name: aicoach-postgres
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: aicoach
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-aicoach}
     ports:
-      - "5440:5432"
+      - "${POSTGRES_PORT:-5440}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     restart: unless-stopped
@@ -45,15 +45,15 @@ services:
     ports:
       - "8080:8000"
     environment:
-      DATABASE_URL: postgresql://user:password@db:5432/aicoach
+      DATABASE_URL: postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-aicoach}
       REDIS_URL: redis://redis:6379/0
-      ALLOWED_ORIGINS: "http://localhost,http://localhost:5173"
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-http://localhost,http://localhost:5173}"
       JUDGE0_API_URL: "http://judge0-server:2358"
       OLLAMA_BASE_URL: "http://ollama:11434"
       GOOGLE_APPLICATION_CREDENTIALS: "/tmp/adc.json"
-      GOOGLE_CLOUD_PROJECT: "project-312c79e1-39c2-4342-8f9"
+      GOOGLE_CLOUD_PROJECT: "${GOOGLE_CLOUD_PROJECT:-}"
     volumes:
-      - C:/Users/Alex/AppData/Roaming/gcloud/application_default_credentials.json:/tmp/adc.json:ro
+      - ${GOOGLE_APPLICATION_CREDENTIALS_HOST_PATH}:/tmp/adc.json:ro
     depends_on:
       - db
       - redis

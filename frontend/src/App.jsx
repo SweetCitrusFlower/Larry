@@ -136,6 +136,7 @@ export default function App() {
                   <Route path="/materials" element={<MaterialExplorer />} />
                   <Route path="/statistics" element={<StatisticsDashboard />} />
                   <Route path="/student-demo" element={<DemoPage />} />
+                  <Route path="/statistics" element={<StatisticsDashboard />} />
                 </>
               ) : (
               <>

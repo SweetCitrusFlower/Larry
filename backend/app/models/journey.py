@@ -26,6 +26,7 @@ class Journey(Base):
     target_days: Mapped[int] = mapped_column(default=1)
     journey_title: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     overview: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    prompt_embedding: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now)
 
     # Relationships

@@ -30,6 +30,7 @@ def init_db():
         user_submission,
         daily_plan,
         chat_message,
+        hint,
     )
     Base.metadata.create_all(bind=engine)
 

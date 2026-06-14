@@ -9,9 +9,13 @@ from app.api.deps import get_current_user
 from app.models.user import User
 from app.models.journey import Journey
 from app.models.daily_plan import DailyPlan
-from app.crud import get_equivalent_journey, clone_journey_for_user
+from app.models.task import Task
 from app.agents.master_planner import generate_roadmap, modify_roadmap
-from app.schemas.journey import JourneyResponse, JourneyGenerateRequest, JourneyModifyRequest, DailyPlanResponse
+from app.schemas.journey import JourneyResponse, JourneyGenerateRequest, JourneyModifyRequest, DailyPlanResponse, JourneySimilarityResponse
+import os
+import numpy as np
+from langchain_google_vertexai import VertexAIEmbeddings
+from pydantic import BaseModel
 
 router = APIRouter()
 
@@ -137,12 +141,18 @@ async def generate_new_journey(
         # No cached equivalent found — proceed to generate via AI pipeline
         roadmap = await generate_roadmap(request.prompt, request.target_days, db=db)
         
+        # Compute prompt embedding
+        embedding_model_name = os.getenv("VERTEX_EMBEDDING_MODEL", "text-embedding-004")
+        embeddings = VertexAIEmbeddings(model=embedding_model_name)
+        prompt_embedding = await embeddings.aembed_query(request.prompt)
+
         db_journey = Journey(
             user_id=current_user.id,
             original_prompt=request.prompt,
             target_days=request.target_days,
             journey_title=roadmap.journey_title,
-            overview=roadmap.overview
+            overview=roadmap.overview,
+            prompt_embedding=prompt_embedding
         )
         db.add(db_journey)
         db.flush()
@@ -178,6 +188,133 @@ async def generate_new_journey(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred during journey generation: {str(e)}"
         )
+
+
+
+@router.post("/check-similarity")
+async def check_similarity(
+    request: JourneyGenerateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Check if a highly similar journey exists in the database.
+    Returns the most similar journey if score >= 90.
+    """
+    embedding_model_name = os.getenv("VERTEX_EMBEDDING_MODEL", "text-embedding-004")
+    embeddings = VertexAIEmbeddings(model=embedding_model_name)
+    query_embedding = np.array(await embeddings.aembed_query(request.prompt))
+
+    # Fetch all journeys with embeddings
+    stmt = select(Journey).options(joinedload(Journey.daily_plans)).where(Journey.prompt_embedding.is_not(None))
+    existing_journeys = db.execute(stmt).scalars().unique().all()
+
+    best_match = None
+    best_score = 0.0
+
+    for existing in existing_journeys:
+        existing_emb = np.array(existing.prompt_embedding)
+        
+        # Cosine similarity
+        dot_product = np.dot(query_embedding, existing_emb)
+        norm_q = np.linalg.norm(query_embedding)
+        norm_e = np.linalg.norm(existing_emb)
+        
+        if norm_q == 0 or norm_e == 0:
+            print(f"Skipping journey {existing.id} due to zero norm")
+            continue
+            
+        cosine_sim = dot_product / (norm_q * norm_e)
+        topic_score = max(0, cosine_sim) * 100
+        
+        # Duration compatibility: Softer flat penalty of 2% per day difference
+        existing_days = int(existing.target_days)
+        target_days = int(request.target_days)
+        day_diff = abs(existing_days - target_days)
+        duration_compatibility = max(0.0, 100.0 - (day_diff * 2.0))
+        
+        total_score = (topic_score * 0.85) + (duration_compatibility * 0.15)
+        
+        print(f"Journey ID: {existing.id} | Topic Score: {topic_score:.2f} | Duration Score: {duration_compatibility:.2f} | Total Score: {total_score:.2f}")
+        if total_score >= 80 and total_score > best_score:
+            best_score = total_score
+            best_match = existing
+
+    if best_match:
+        print(f"Found best match: Journey {best_match.id} with score {best_score:.2f}")
+        return JourneySimilarityResponse(score=best_score, journey=best_match)
+    
+    print("No matching journey found above threshold.")
+    
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+class CloneRequest(BaseModel):
+    source_journey_id: int
+    new_prompt: str
+
+@router.post("/clone", status_code=status.HTTP_201_CREATED, response_model=JourneyResponse)
+async def clone_journey(
+    request: CloneRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    stmt = (
+        select(Journey)
+        .options(joinedload(Journey.daily_plans).joinedload(DailyPlan.tasks))
+        .where(Journey.id == request.source_journey_id)
+    )
+    source_journey = db.execute(stmt).scalars().unique().first()
+    
+    if not source_journey:
+        raise HTTPException(status_code=404, detail="Source journey not found")
+        
+    db_journey = Journey(
+        user_id=current_user.id,
+        original_prompt=request.new_prompt,
+        target_days=source_journey.target_days,
+        journey_title=source_journey.journey_title,
+        overview=source_journey.overview,
+        prompt_embedding=source_journey.prompt_embedding
+    )
+    db.add(db_journey)
+    db.flush()
+    
+    for old_plan in source_journey.daily_plans:
+        new_plan = DailyPlan(
+            journey_id=db_journey.id,
+            day_number=old_plan.day_number,
+            title=old_plan.title,
+            concepts_to_cover=old_plan.concepts_to_cover,
+            difficulty=old_plan.difficulty,
+            theoretical_topic_content=old_plan.theoretical_topic_content,
+            rag_context_payload=old_plan.rag_context_payload,
+            content_status=old_plan.content_status,
+            recommended_problem_tags=old_plan.recommended_problem_tags
+        )
+        db.add(new_plan)
+        db.flush()
+        
+        for old_task in old_plan.tasks:
+            new_task = Task(
+                daily_plan_id=new_plan.id,
+                title=old_task.title,
+                problem_id=old_task.problem_id,
+                description=old_task.description,
+                starter_code=old_task.starter_code,
+                hidden_solution=old_task.hidden_solution
+            )
+            db.add(new_task)
+            
+    db.commit()
+    db.refresh(db_journey)
+    
+    journey = (
+        db.query(Journey)
+        .options(joinedload(Journey.daily_plans))
+        .filter(Journey.id == db_journey.id)
+        .first()
+    )
+    return journey
 
 @router.post("/{journey_id}/modify", response_model=JourneyResponse)
 async def modify_journey(
