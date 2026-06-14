@@ -11,7 +11,7 @@ from app.models.journey import Journey
 from app.models.daily_plan import DailyPlan
 from app.models.task import Task
 from app.agents.master_planner import generate_roadmap, modify_roadmap
-from app.crud.crud_journey import get_equivalent_journey, clone_journey_for_user
+from app.crud.crud_journey import get_equivalent_journey, clone_journey_for_user, delete_journey as crud_delete_journey
 from app.schemas.journey import JourneyResponse, JourneyGenerateRequest, JourneyModifyRequest, DailyPlanResponse, JourneySimilarityResponse
 import os
 import numpy as np
@@ -78,8 +78,7 @@ def delete_journey(
     if not journey:
         raise HTTPException(status_code=404, detail="Journey not found")
         
-    db.delete(journey)
-    db.commit()
+    crud_delete_journey(db, journey)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 @router.post("/generate", status_code=status.HTTP_201_CREATED, response_model=JourneyResponse)

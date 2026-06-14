@@ -39,7 +39,10 @@ async def generate_daily_lesson(daily_plan_id: int, db: Session):
         chroma_client = chromadb.HttpClient(host=chroma_host, port=chroma_port)
         
         embedding_model_name = os.getenv("VERTEX_EMBEDDING_MODEL", "gemini-embedding-001")
-        embeddings = VertexAIEmbeddings(model=embedding_model_name)
+        embeddings = VertexAIEmbeddings(
+            model=embedding_model_name,
+            project=os.getenv("GOOGLE_CLOUD_PROJECT")
+        )
         
         vectorstore = Chroma(
             client=chroma_client,
@@ -55,6 +58,7 @@ async def generate_daily_lesson(daily_plan_id: int, db: Session):
         # 3. Generate Markdown Lesson using Gemini 1.5 Pro
         llm = ChatVertexAI(
             model="gemini-2.5-pro",
+            project=os.getenv("GOOGLE_CLOUD_PROJECT"),
             temperature=0.3  # Low temperature for educational accuracy
         )
         

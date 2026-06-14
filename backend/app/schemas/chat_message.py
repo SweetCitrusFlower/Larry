@@ -17,3 +17,7 @@ class ChatMessageResponse(ChatMessageBase):
     timestamp: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class HintRequest(BaseModel):
+    user_query: str
+    current_code: Optional[str] = None
