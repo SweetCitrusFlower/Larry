@@ -5,7 +5,7 @@
 Larry is a next-generation, web-based AI Coding Coaching platform. Designed from scratch using a Multi-Agent System (MAS) and Retrieval-Augmented Generation (RAG), Larry provides users with personalized learning journeys, dynamic curriculum generation, an isolated, real-time code execution environment, and a fully context-aware Socratic Tutor.
 
 This document serves as the official project architecture and documentation.
-#Demo for our project: https://youtu.be/V0SoRE3jv2I
+# Demo for our project: https://youtu.be/V0SoRE3jv2I
 ---
 
 ## 🏗 Architecture Overview
