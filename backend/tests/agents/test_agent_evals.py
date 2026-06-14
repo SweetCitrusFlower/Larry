@@ -161,11 +161,37 @@ def judge_response(eval_case: EvalCase, agent_response: str) -> float:
     """
     if EVAL_MODE == "live":
         # ── LIVE MODE ────────────────────────────────────────────────────────
-        # TODO: Replace this block with your LangSmith or Ragas integration.
-        raise NotImplementedError(
-            "Live eval mode requires LANGSMITH_API_KEY and LangSmith integration. "
-            "See TODO in judge_response() to configure."
-        )
+        # Using Google Vertex AI as the Judge
+        from langchain_google_vertexai import ChatVertexAI
+        from langchain_core.prompts import ChatPromptTemplate
+        
+        try:
+            judge_llm = ChatVertexAI(
+                model="gemini-2.5-pro",
+                project=os.getenv("GOOGLE_CLOUD_PROJECT"),
+                temperature=0.0
+            )
+            
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", "You are an impartial AI Judge. You will be given a success criteria rubric and an agent's response. Evaluate how well the agent's response satisfies the rubric. Output ONLY a single floating-point number between 0.0 and 1.0 representing the score. Do not include any other text, reasoning, or markdown formatting."),
+                ("human", "Rubric (Success Criteria):\n{rubric}\n\nAgent Response:\n{response}")
+            ])
+            
+            chain = prompt | judge_llm
+            result = chain.invoke({
+                "rubric": eval_case.success_criteria,
+                "response": agent_response
+            })
+            
+            score_text = str(result.content).strip()
+            try:
+                return float(score_text)
+            except ValueError:
+                print(f"Failed to parse Judge score: {score_text}")
+                return 0.0
+        except Exception as e:
+            print(f"Judge LLM failed: {e}")
+            return 0.0
     else:
         # ── STRICT EVALUATION ENFORCEMENT ──────────────────────────────────────────────
         pytest.fail("Evaluation framework bypass detected! LARRY_EVAL_MODE must be set to 'live' to run agent evaluations. Mocking is disabled to ensure Golden Dataset integrity.")
@@ -244,30 +270,34 @@ class TestSocraticTutorEvals:
     """
 
     @pytest.mark.asyncio
-    @patch('app.services.socratic_tutor.ChatVertexAI')
-    async def test_tutor_guardrail_fallback_on_code_leakage(self, mock_chat_vertex_ai):
+    async def test_tutor_guardrail_fallback_on_code_leakage(self):
         """Test A: Simulate lazy student asking for code. Guardrail should intercept."""
-        with patch('app.services.socratic_tutor.ChatPromptTemplate') as mock_prompt:
+        if EVAL_MODE == "live":
+            pytest.skip("Skipping in live mode: We cannot reliably force the real LLM to disobey its prompt and leak code just to test the regex guardrail.")
+            
+        with patch('app.services.socratic_tutor.ChatVertexAI'), patch('app.services.socratic_tutor.ChatPromptTemplate') as mock_prompt:
             mock_chain = AsyncMock()
             # LLM "fails" and returns code
             mock_chain.ainvoke.return_value = type('Response', (), {'content': "Here is the code: ```python\nprint('hello')\n```"})()
             mock_prompt.from_messages.return_value.__or__.return_value = mock_chain
-            
             response = await call_socratic_tutor("I am totally stuck, please just give me the exact Python solution code.")
             assert response == FALLBACK_RESPONSE
 
     @pytest.mark.asyncio
-    @patch('app.services.socratic_tutor.ChatVertexAI')
-    async def test_tutor_valid_socratic_prompt(self, mock_chat_vertex_ai):
+    async def test_tutor_valid_socratic_prompt(self):
         """Test B: Simulate valid pedagogical response from mocked LLM."""
-        with patch('app.services.socratic_tutor.ChatPromptTemplate') as mock_prompt:
-            mock_chain = AsyncMock()
-            valid_response = "What strategy do you use when looking up a word in a dictionary?"
-            mock_chain.ainvoke.return_value = type('Response', (), {'content': valid_response})()
-            mock_prompt.from_messages.return_value.__or__.return_value = mock_chain
-            
+        if EVAL_MODE != "live":
+            with patch('app.services.socratic_tutor.ChatVertexAI'), patch('app.services.socratic_tutor.ChatPromptTemplate') as mock_prompt:
+                mock_chain = AsyncMock()
+                valid_response = "What strategy do you use when looking up a word in a dictionary?"
+                mock_chain.ainvoke.return_value = type('Response', (), {'content': valid_response})()
+                mock_prompt.from_messages.return_value.__or__.return_value = mock_chain
+                response = await call_socratic_tutor("I don't understand how a binary search tree works.")
+                assert response == valid_response
+        else:
             response = await call_socratic_tutor("I don't understand how a binary search tree works.")
-            assert response == valid_response
+            # In live mode, we just check that it returns a non-empty string and doesn't fallback
+            assert response and response != FALLBACK_RESPONSE
 
 
 # ─────────────────────────────────────────────
@@ -282,35 +312,42 @@ class TestMasterPlannerEvals:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("eval_case", PLANNER_EVAL_CASES, ids=[c.case_id for c in PLANNER_EVAL_CASES])
-    @patch("tests.agents.test_agent_evals.generate_roadmap", new_callable=AsyncMock)
-    async def test_planner_outputs_valid_json(self, mock_generate_roadmap, eval_case):
+    async def test_planner_outputs_valid_json(self, eval_case):
         """Deterministic check: planner must return parseable JSON."""
         expected_days = eval_case.metadata.get("expected_days", 0)
         from app.schemas.planner_schemas import JourneyRoadmap, DailyPlanItem
-        mock_generate_roadmap.return_value = JourneyRoadmap(
-            journey_title="Mock", overview="Mock", 
-            daily_plans=[DailyPlanItem(day_number=i+1, title="M", concepts_to_cover=["A"], difficulty="Beginner", recommended_problem_tags=[]) for i in range(expected_days)]
-        )
-        response = await call_master_planner(eval_case.user_input, expected_days)
+        
+        if EVAL_MODE != "live":
+            with patch("tests.agents.test_agent_evals.generate_roadmap", new_callable=AsyncMock) as mock_generate_roadmap:
+                mock_generate_roadmap.return_value = JourneyRoadmap(
+                    journey_title="Mock", overview="Mock", 
+                    daily_plans=[DailyPlanItem(day_number=i+1, title="M", concepts_to_cover=["A"], difficulty="Beginner", recommended_problem_tags=[]) for i in range(expected_days)]
+                )
+                response = await call_master_planner(eval_case.user_input, expected_days)
+        else:
+            response = await call_master_planner(eval_case.user_input, expected_days)
+            
         result = validate_planner_structure(response, expected_days)
-
         assert result["valid_json"], f"[{eval_case.case_id}] Master Planner returned INVALID JSON.\nRaw response: {response[:500]}"
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("eval_case", PLANNER_EVAL_CASES, ids=[c.case_id for c in PLANNER_EVAL_CASES])
-    @patch("tests.agents.test_agent_evals.generate_roadmap", new_callable=AsyncMock)
-    async def test_planner_returns_correct_number_of_days(self, mock_generate_roadmap, eval_case):
+    async def test_planner_returns_correct_number_of_days(self, eval_case):
         """Deterministic check: the 'daily_plans' array must have exactly the requested length."""
         expected_days = eval_case.metadata.get("expected_days", 0)
         from app.schemas.planner_schemas import JourneyRoadmap, DailyPlanItem
-        mock_generate_roadmap.return_value = JourneyRoadmap(
-            journey_title="Mock Journey", overview="Mock Overview",
-            daily_plans=[DailyPlanItem(day_number=i+1, title=f"Day {i+1}", concepts_to_cover=["A"], difficulty="Beginner", recommended_problem_tags=[]) for i in range(expected_days)]
-        )
         
-        response = await call_master_planner(eval_case.user_input, expected_days)
+        if EVAL_MODE != "live":
+            with patch("tests.agents.test_agent_evals.generate_roadmap", new_callable=AsyncMock) as mock_generate_roadmap:
+                mock_generate_roadmap.return_value = JourneyRoadmap(
+                    journey_title="Mock Journey", overview="Mock Overview",
+                    daily_plans=[DailyPlanItem(day_number=i+1, title=f"Day {i+1}", concepts_to_cover=["A"], difficulty="Beginner", recommended_problem_tags=[]) for i in range(expected_days)]
+                )
+                response = await call_master_planner(eval_case.user_input, expected_days)
+        else:
+            response = await call_master_planner(eval_case.user_input, expected_days)
+            
         result = validate_planner_structure(response, expected_days)
-
         assert result["correct_day_count"], (
             f"[{eval_case.case_id}] Planner returned wrong number of days.\n"
             f"Expected: {expected_days}, Got: {len(result['parsed'].get('daily_plans', [])) if result['parsed'] else 'N/A'}\n"
@@ -319,16 +356,20 @@ class TestMasterPlannerEvals:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("eval_case", PLANNER_EVAL_CASES, ids=[c.case_id for c in PLANNER_EVAL_CASES])
-    @patch("tests.agents.test_agent_evals.generate_roadmap", new_callable=AsyncMock)
-    async def test_planner_logical_progression_schema_validation(self, mock_generate_roadmap, eval_case):
+    async def test_planner_logical_progression_schema_validation(self, eval_case):
         """Deterministic Pydantic Check: Replaces LLM-as-a-Judge for logical structure."""
         expected_days = eval_case.metadata.get("expected_days", 0)
         from app.schemas.planner_schemas import JourneyRoadmap, DailyPlanItem
-        mock_generate_roadmap.return_value = JourneyRoadmap(
-            journey_title="Mock", overview="Mock", 
-            daily_plans=[DailyPlanItem(day_number=i+1, title="M", concepts_to_cover=["A"], difficulty="Beginner", recommended_problem_tags=[]) for i in range(expected_days)]
-        )
-        response_str = await call_master_planner(eval_case.user_input, expected_days)
+        
+        if EVAL_MODE != "live":
+            with patch("tests.agents.test_agent_evals.generate_roadmap", new_callable=AsyncMock) as mock_generate_roadmap:
+                mock_generate_roadmap.return_value = JourneyRoadmap(
+                    journey_title="Mock", overview="Mock", 
+                    daily_plans=[DailyPlanItem(day_number=i+1, title="M", concepts_to_cover=["A"], difficulty="Beginner", recommended_problem_tags=[]) for i in range(expected_days)]
+                )
+                response_str = await call_master_planner(eval_case.user_input, expected_days)
+        else:
+            response_str = await call_master_planner(eval_case.user_input, expected_days)
         
         try:
             data = json.loads(response_str)
@@ -342,19 +383,14 @@ class TestMasterPlannerEvals:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("eval_case", PLANNER_EVAL_CASES, ids=[c.case_id for c in PLANNER_EVAL_CASES])
-    @patch("tests.agents.test_agent_evals.generate_roadmap", new_callable=AsyncMock)
-    async def test_planner_logical_progression(self, mock_generate_roadmap, eval_case):
+    async def test_planner_logical_progression(self, eval_case):
         """LLM Judge check: topics must be logically ordered for the target skill level."""
         # Foolproof skip logic - NEVER fails in CI
         if EVAL_MODE != "live":
             pytest.skip("Skipping live LLM evals in CI. Golden Dataset integrity maintained.")
             
         expected_days = eval_case.metadata.get("expected_days", 0)
-        from app.schemas.planner_schemas import JourneyRoadmap, DailyPlanItem
-        mock_generate_roadmap.return_value = JourneyRoadmap(
-            journey_title="Mock", overview="Mock", 
-            daily_plans=[DailyPlanItem(day_number=i+1, title="M", concepts_to_cover=["A"], difficulty="Beginner", recommended_problem_tags=[]) for i in range(expected_days)]
-        )
+        
         response = await call_master_planner(eval_case.user_input, expected_days)
         score = judge_response(eval_case, response)
 

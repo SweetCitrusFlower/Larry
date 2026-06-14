@@ -1,3 +1,4 @@
+import os
 import pytest
 import asyncio
 from unittest.mock import patch, AsyncMock
@@ -12,6 +13,7 @@ from app.db.database import Base
 engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+
 @pytest.fixture
 def db_session():
     Base.metadata.create_all(bind=engine)
@@ -23,17 +25,7 @@ def db_session():
         Base.metadata.drop_all(bind=engine)
 
 @pytest.mark.asyncio
-@patch('app.agents.content_creator.ChatVertexAI')
-@patch('app.agents.content_creator.Chroma')
-@patch('app.agents.content_creator.VertexAIEmbeddings')
-@patch('app.agents.content_creator.chromadb.HttpClient')
-async def test_generate_daily_lesson_saves_rag_context(
-    mock_http_client,
-    mock_embeddings,
-    mock_chroma,
-    mock_chat_vertex_ai,
-    db_session
-):
+async def test_generate_daily_lesson_saves_rag_context(db_session):
     """
     Verify that the `rag_context_payload` field in the database exactly matches 
     the chunks returned by the ChromaDB mock before the session commits.
@@ -76,29 +68,38 @@ async def test_generate_daily_lesson_saves_rag_context(
     db_session.commit()
     db_session.refresh(plan)
 
-    # 2. Setup Mock RAG Chunks
-    mock_doc1 = type('Document', (), {'page_content': "Mock RAG Chunk 1: Binary trees are trees."})()
-    mock_doc2 = type('Document', (), {'page_content': "Mock RAG Chunk 2: Traversal is important."})()
+    # 2. Call the function based on Eval Mode
+    eval_mode = os.environ.get("LARRY_EVAL_MODE", "mock")
     
-    mock_vectorstore_instance = mock_chroma.return_value
-    mock_vectorstore_instance.similarity_search.return_value = [mock_doc1, mock_doc2]
+    if eval_mode != "live":
+        with patch('app.agents.content_creator.ChatVertexAI'), \
+             patch('app.agents.content_creator.Chroma') as mock_chroma, \
+             patch('app.agents.content_creator.VertexAIEmbeddings'), \
+             patch('app.agents.content_creator.chromadb.HttpClient'), \
+             patch('app.agents.content_creator.ChatPromptTemplate') as mock_prompt:
+             
+            # Setup Mock RAG Chunks
+            mock_doc1 = type('Document', (), {'page_content': "Mock RAG Chunk 1: Binary trees are trees."})()
+            mock_doc2 = type('Document', (), {'page_content': "Mock RAG Chunk 2: Traversal is important."})()
+            
+            mock_vectorstore_instance = mock_chroma.return_value
+            mock_vectorstore_instance.similarity_search.return_value = [mock_doc1, mock_doc2]
 
-    # 3. Setup Mock LLM Response
-    # The chain structure is prompt | llm, so we need to mock the invoke chain.
-    # Since content_creator uses chain.ainvoke directly, we can mock it by patching the ChatPromptTemplate __or__ operator
-    with patch('app.agents.content_creator.ChatPromptTemplate') as mock_prompt:
-        mock_chain = AsyncMock()
-        mock_chain.ainvoke.return_value = type('Response', (), {'content': "## Teorie\nGenerated Mock Content."})()
-        mock_prompt.from_messages.return_value.__or__.return_value = mock_chain
-        
-        # 4. Call the function
+            # Setup Mock LLM Response
+            mock_chain = AsyncMock()
+            mock_chain.ainvoke.return_value = type('Response', (), {'content': "## Teorie\nGenerated Mock Content."})()
+            mock_prompt.from_messages.return_value.__or__.return_value = mock_chain
+            
+            await generate_daily_lesson(plan.id, db_session)
+            
+            db_session.refresh(plan)
+            expected_payload = "Mock RAG Chunk 1: Binary trees are trees.\n\n---\n\nMock RAG Chunk 2: Traversal is important."
+            assert plan.content_status == "COMPLETED"
+            assert plan.theoretical_topic_content == "## Teorie\nGenerated Mock Content."
+            assert plan.rag_context_payload == expected_payload, "RAG Context payload did not match the mocked ChromaDB chunks."
+    else:
+        # In LIVE mode, call it directly and just verify completion status
         await generate_daily_lesson(plan.id, db_session)
-
-    # 5. Assertions
-    db_session.refresh(plan)
-    
-    expected_payload = "Mock RAG Chunk 1: Binary trees are trees.\n\n---\n\nMock RAG Chunk 2: Traversal is important."
-    
-    assert plan.content_status == "COMPLETED"
-    assert plan.theoretical_topic_content == "## Teorie\nGenerated Mock Content."
-    assert plan.rag_context_payload == expected_payload, "RAG Context payload did not match the mocked ChromaDB chunks."
+        db_session.refresh(plan)
+        assert plan.content_status == "COMPLETED"
+        assert len(plan.theoretical_topic_content) > 10

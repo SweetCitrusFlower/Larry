@@ -10,7 +10,17 @@ Root fix strategy:
   per test, rolling back after each test to ensure isolation.
 """
 import os
+import sys
 import pytest
+
+def pytest_addoption(parser):
+    parser.addoption("--live-evals", action="store_true", default=False, help="Run live evaluations using real LLM API calls")
+
+LIVE_EVALS = "--live-evals" in sys.argv
+if LIVE_EVALS:
+    os.environ["LARRY_EVAL_MODE"] = "live"
+else:
+    os.environ["LARRY_EVAL_MODE"] = "mock"
 
 # ── Set env vars BEFORE importing anything from the app ────────────────────
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
@@ -25,8 +35,9 @@ from unittest.mock import MagicMock
 
 # Mock out heavy and external dependencies to ensure tests run offline
 sys.modules['weasyprint'] = MagicMock()
-sys.modules['langchain_ollama'] = MagicMock()
-sys.modules['langchain_google_vertexai'] = MagicMock()
+if not LIVE_EVALS:
+    sys.modules['langchain_ollama'] = MagicMock()
+    sys.modules['langchain_google_vertexai'] = MagicMock()
 sys.modules['langchain_chroma'] = MagicMock()
 sys.modules['chromadb'] = MagicMock()
 
@@ -91,3 +102,12 @@ def client():
     with TestClient(app, raise_server_exceptions=True) as c:
         yield c
     app.dependency_overrides.clear()
+
+@pytest.fixture(scope="function")
+def db():
+    """Yields a test database session for CRUD operations."""
+    session = TestingSessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()

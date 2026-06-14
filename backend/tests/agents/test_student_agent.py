@@ -43,21 +43,29 @@ class TestStudentAgentWorkflow:
     to executing code via Judge0.
     """
 
-    @patch("app.api.routers.journeys.generate_roadmap", new_callable=AsyncMock)
-    def test_1_student_journey_generation(self, mock_generate_roadmap, student_client: TestClient):
+    def test_1_student_journey_generation(self, student_client: TestClient):
         """
         Step 1: The student asks the Master Planner for a learning journey.
         """
-        mock_generate_roadmap.return_value = JourneyRoadmap(
-            journey_title="Mock Journey",
-            overview="Mock Overview",
-            daily_plans=[DailyPlanItem(day_number=i+1, title=f"Day {i+1}", concepts_to_cover=["A"], difficulty="Beginner", recommended_problem_tags=[]) for i in range(5)]
-        )
+        import os
+        eval_mode = os.environ.get("LARRY_EVAL_MODE", "mock")
         
-        # Note: Adjust the payload according to your actual schema
         payload = {"prompt": "I want to learn Python loops", "target_days": 5}
         
-        response = student_client.post("/api/v1/journeys/generate", json=payload)
+        if eval_mode != "live":
+            with patch("app.api.routers.journeys.generate_roadmap", new_callable=AsyncMock) as mock_generate_roadmap, \
+                 patch("app.api.routers.journeys.VertexAIEmbeddings") as mock_embeddings:
+                mock_generate_roadmap.return_value = JourneyRoadmap(
+                    journey_title="Mock Journey",
+                    overview="Mock Overview",
+                    daily_plans=[DailyPlanItem(day_number=i+1, title=f"Day {i+1}", concepts_to_cover=["A"], difficulty="Beginner", recommended_problem_tags=[]) for i in range(5)]
+                )
+                mock_instance = mock_embeddings.return_value
+                mock_instance.aembed_query = AsyncMock(return_value=[0.1] * 768)
+                
+                response = student_client.post("/api/v1/journeys/generate", json=payload)
+        else:
+            response = student_client.post("/api/v1/journeys/generate", json=payload)
         
         # Assert the endpoint exists and successfully processes the request
         assert response.status_code in [200, 201], f"Journey generation failed: {response.text}"

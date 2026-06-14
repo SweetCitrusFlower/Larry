@@ -11,6 +11,7 @@ from app.models.journey import Journey
 from app.models.daily_plan import DailyPlan
 from app.models.task import Task
 from app.agents.master_planner import generate_roadmap, modify_roadmap
+from app.crud.crud_journey import get_equivalent_journey, clone_journey_for_user
 from app.schemas.journey import JourneyResponse, JourneyGenerateRequest, JourneyModifyRequest, DailyPlanResponse, JourneySimilarityResponse
 import os
 import numpy as np
