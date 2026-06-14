@@ -1,0 +1,140 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: aicoach-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-aicoach}
+    ports:
+      - "${POSTGRES_PORT:-5440}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  vectordb:
+    image: chromadb/chroma:latest
+    container_name: aicoach-chromadb
+    ports:
+      - "8000:8000"
+    volumes:
+      - chromadata:/chroma/chroma
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    container_name: aicoach-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: aicoach-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollamadata:/root/.ollama
+    restart: unless-stopped
+
+  backend:
+    image: ghcr.io/sweetcitrusflower/larry-backend:latest
+    container_name: aicoach-backend
+    ports:
+      - "8080:8000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-aicoach}
+      REDIS_URL: redis://redis:6379/0
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-http://localhost,http://localhost:5173}"
+      JUDGE0_API_URL: "http://judge0-server:2358"
+      OLLAMA_BASE_URL: "http://ollama:11434"
+      GOOGLE_APPLICATION_CREDENTIALS: "/tmp/adc.json"
+      GOOGLE_CLOUD_PROJECT: "${GOOGLE_CLOUD_PROJECT:-}"
+    volumes:
+      - ${GOOGLE_APPLICATION_CREDENTIALS_HOST_PATH}:/tmp/adc.json:ro
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+
+  frontend:
+    image: ghcr.io/sweetcitrusflower/larry-frontend:latest
+    container_name: aicoach-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  judge0-server:
+    image: judge0/judge0:1.13.1
+    container_name: judge0-server
+    environment:
+      - REDIS_PASSWORD=judge0redispassword
+      - REDIS_HOST=judge0-redis
+      - REDIS_PORT=6379
+      - POSTGRES_USER=judge0
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=judge0
+      - POSTGRES_HOST=judge0-db
+      - POSTGRES_PORT=5432
+    ports:
+      - "8358:2358"
+    privileged: true
+    depends_on:
+      - judge0-db
+      - judge0-redis
+    restart: always
+
+  judge0-worker:
+    image: judge0/judge0:1.13.1
+    container_name: judge0-worker
+    environment:
+      - REDIS_PASSWORD=judge0redispassword
+      - REDIS_HOST=judge0-redis
+      - REDIS_PORT=6379
+      - POSTGRES_USER=judge0
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=judge0
+      - POSTGRES_HOST=judge0-db
+      - POSTGRES_PORT=5432
+    command: ["bash", "-c", "echo 'root ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && ./scripts/workers"]
+    privileged: true
+    user: "root"
+    depends_on:
+      - judge0-db
+      - judge0-redis
+    restart: always
+
+  judge0-db:
+    image: postgres:13.0
+    container_name: judge0-postgres
+    environment:
+      - POSTGRES_USER=judge0
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=judge0
+    volumes:
+      - judge0-postgres-data:/var/lib/postgresql/data/
+    restart: always
+
+  judge0-redis:
+    image: redis:6.0
+    container_name: judge0-redis
+    environment:
+      - REDIS_PASSWORD=judge0redispassword
+    command: [
+      "bash", "-c",
+      'docker-entrypoint.sh --appendonly yes --requirepass "$$REDIS_PASSWORD"'
+    ]
+    volumes:
+      - judge0-redis-data:/data
+    restart: always
+
+volumes:
+  pgdata:
+  chromadata:
+  ollamadata:
+  judge0-postgres-data:
+  judge0-redis-data:
