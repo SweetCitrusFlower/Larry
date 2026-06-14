@@ -231,7 +231,13 @@ from app.schemas.planner_schemas import JourneyRoadmap
 
 async def call_socratic_tutor(user_input: str) -> str:
     """Real call to Socratic Tutor with empty context."""
-    return await get_socratic_hint(user_query=user_input, rag_context="")
+    return await get_socratic_hint(
+        user_query=user_input, 
+        rag_context="", 
+        theory_context="", 
+        problem_context="", 
+        current_code=""
+    )
 
 
 async def call_master_planner(user_input: str, expected_days: int, db=None) -> str:

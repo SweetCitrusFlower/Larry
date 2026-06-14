@@ -39,7 +39,7 @@ async def test_get_socratic_hint_clean_response(mock_chat_vertex_ai):
         # Mock the `|` operator
         mock_prompt.from_messages.return_value.__or__.return_value = mock_chain
         
-        response = await socratic_tutor.get_socratic_hint("I'm stuck", "Some context")
+        response = await socratic_tutor.get_socratic_hint("I'm stuck", "Some context", "", "", "")
         assert response == "What concept from the notes applies here?"
 
 @pytest.mark.asyncio
@@ -51,5 +51,5 @@ async def test_get_socratic_hint_code_leakage(mock_chat_vertex_ai):
         mock_chain.ainvoke.return_value = type('Response', (), {'content': "Here is the answer: `print(1)`"})()
         mock_prompt.from_messages.return_value.__or__.return_value = mock_chain
         
-        response = await socratic_tutor.get_socratic_hint("I'm stuck", "Some context")
+        response = await socratic_tutor.get_socratic_hint("I'm stuck", "Some context", "", "", "")
         assert response == FALLBACK_RESPONSE

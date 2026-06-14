@@ -166,7 +166,7 @@ const Workspace = () => {
     setHintLoading(true);
     setOutput((prev) => prev + `\nAsking Larry for a hint...\n`);
     try {
-      const response = await chatAPI.requestHint(dailyPlanId, userQuery);
+      const response = await chatAPI.requestHint(dailyPlanId, userQuery, code);
       const hintMsg = response.data.content;
       setOutput((prev) => prev + `\n💡 LARRY TUTOR:\n${hintMsg}\n\n`);
     } catch (e) {

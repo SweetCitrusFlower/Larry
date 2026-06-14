@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.models.user import User
-from app.schemas.chat_message import ChatMessageCreate, ChatMessageResponse
+from app.schemas.chat_message import ChatMessageCreate, ChatMessageResponse, HintRequest
 from app.crud.crud_chat_message import create_chat_message, get_chat_messages_by_user
 from app.api.deps import get_current_user
 from app.models.daily_plan import DailyPlan
@@ -42,7 +42,7 @@ def read_messages(
 @router.post("/{daily_plan_id}/hint", response_model=ChatMessageResponse, status_code=status.HTTP_201_CREATED)
 async def request_socratic_hint(
     daily_plan_id: int,
-    user_query: str,
+    hint_request: HintRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -61,14 +61,25 @@ async def request_socratic_hint(
 
     # 2. Get the RAG context inherited from Master Planner / Content Creator
     rag_context = daily_plan.rag_context_payload or ""
+    
+    # Extract Theory and Problem Context
+    theory_context = daily_plan.theoretical_topic_content or ""
+    problem_context = daily_plan.tasks[0].description if daily_plan.tasks else ""
+    current_code = hint_request.current_code or ""
 
     # 3. Call Socratic Tutor Service
-    tutor_response_text = await get_socratic_hint(user_query=user_query, rag_context=rag_context)
+    tutor_response_text = await get_socratic_hint(
+        user_query=hint_request.user_query,
+        theory_context=theory_context,
+        problem_context=problem_context,
+        current_code=current_code,
+        rag_context=rag_context
+    )
 
     # 4. Save User's Message
     user_msg_in = ChatMessageCreate(
         role="user",
-        content=user_query,
+        content=hint_request.user_query,
         user_id=current_user.id,
         daily_plan_id=daily_plan_id
     )

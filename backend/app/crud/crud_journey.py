@@ -27,6 +27,29 @@ def update_journey(db: Session, db_journey: Journey, journey_in: JourneyUpdate) 
     return db_journey
 
 def delete_journey(db: Session, db_journey: Journey) -> Journey:
+    from sqlalchemy import delete
+    from app.models.chat_message import ChatMessage
+    from app.models.hint import Hint
+    from app.models.user_submission import UserSubmission
+    
+    # 1. Manually cascade delete ChatMessages linked via daily_plan_id
+    daily_plan_ids = [dp.id for dp in db_journey.daily_plans]
+    if daily_plan_ids:
+        db.execute(delete(ChatMessage).where(ChatMessage.daily_plan_id.in_(daily_plan_ids)))
+        
+        # 2. Manually cascade delete Hints and Submissions linked via task_id
+        task_ids = []
+        for dp in db_journey.daily_plans:
+            for t in dp.tasks:
+                task_ids.append(t.id)
+        if task_ids:
+            db.execute(delete(Hint).where(Hint.task_id.in_(task_ids)))
+            db.execute(delete(UserSubmission).where(UserSubmission.task_id.in_(task_ids)))
+
+    # 3. Manually cascade delete ChatMessages linked via journey_id
+    db.execute(delete(ChatMessage).where(ChatMessage.journey_id == db_journey.id))
+
+    # 4. Finally, delete the Journey (DailyPlans and Tasks will be cascading deleted by SQLAlchemy ORM)
     db.delete(db_journey)
     db.commit()
     return db_journey

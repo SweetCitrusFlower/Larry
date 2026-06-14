@@ -23,7 +23,7 @@ def detect_code_leakage(text: str) -> bool:
         return True
     return False
 
-async def get_socratic_hint(user_query: str, rag_context: str) -> str:
+async def get_socratic_hint(user_query: str, theory_context: str, problem_context: str, current_code: str, rag_context: str) -> str:
     """
     Invokes the LLM to act as a Socratic Tutor.
     If the response contains code, it falls back to a generic question.
@@ -35,13 +35,22 @@ async def get_socratic_hint(user_query: str, rag_context: str) -> str:
     )
     
     system_prompt = """You are a Socratic Tutor. The user is stuck on a programming/technical task.
-Review the provided RAG context below.
+Review the provided context below.
+
+[Theoretical Material]
+{theory_context}
+
+[Problem Description]
+{problem_context}
+
+[User's Current Code]
+{current_code}
 
 [Inherited RAG Context]
 {rag_context}
 
 DO NOT provide code solutions, code snippets, or direct answers under any circumstance.
-Ask exactly one or two strategic, guiding questions that use the exact terminology from the RAG context to nudge the user toward the solution.
+Ask exactly one or two strategic, guiding questions that use the exact terminology from the contexts to nudge the user toward the solution.
 """
     
     prompt = ChatPromptTemplate.from_messages([
@@ -53,7 +62,10 @@ Ask exactly one or two strategic, guiding questions that use the exact terminolo
     
     try:
         response = await chain.ainvoke({
-            "rag_context": rag_context or "No context provided.",
+            "theory_context": theory_context or "No theoretical material provided.",
+            "problem_context": problem_context or "No problem description provided.",
+            "current_code": current_code or "No code provided.",
+            "rag_context": rag_context or "No inherited context provided.",
             "user_query": user_query
         })
         
